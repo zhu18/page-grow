@@ -75,7 +75,7 @@ export class HTMLPageParser extends AbstractParser{
         const w = element.offsetWidth
         let centerX = x + element.offsetWidth / 2;
         let centerY = y + element.offsetHeight / 2;
-        //if (element instanceof HTMLElement) {  对iframe内嵌页面 判断未知，初步估计v8引擎bug, iframe中的DOM元素，并且不能将其视为主文档HTMLElement类型的对象
+        // if (element instanceof HTMLElement) {  对iframe内嵌页面 判断未知，初步估计v8引擎bug, iframe中的DOM元素，并且不能将其视为主文档HTMLElement类型的对象
         if(element.nodeType===1){
             this._els.push({
                     el: element,
@@ -110,7 +110,7 @@ export class HTMLPageParser extends AbstractParser{
      * @returns 动画类型
      */
     private _getType(el:HTMLElement|any):EGrowElementType{
-        let etype:EGrowElementType=EGrowElementType.string
+        let etype:EGrowElementType = EGrowElementType.string
         
         switch(el.tagName.toUpperCase()){
             case "DIV":
