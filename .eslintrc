@@ -1,0 +1,13 @@
+{
+  // "parser": "babel-eslint",
+  // "extends":"mdcs",
+  // "plugins":[
+  //   "compat",
+  //   "import"
+  // ],
+  // "rules": {
+  //   "compat/compat":"error",
+  //   "import/no-unresolved": "error",
+  //   "strict": 0
+  // }
+}

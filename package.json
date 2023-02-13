@@ -1,0 +1,58 @@
+{
+  "name": "page-grow",
+  "version": "0.1.0",
+  "description": "页面进出场动画管理，零配置，高扩展，是可视化大屏或其他要求炫酷的商业网站必备插件。",
+  "main": "build/index.module.js",
+  "type": "module",
+  "scripts": {
+    "build": "rollup -c ./build/rollup.config.mjs",
+    "start": "npm run dev"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zhu18/page-grow.git"
+  },
+  "keywords": [
+    "animation",
+    "grow",
+    "effects",
+    "cool",
+    "动画",
+    "特效",
+    "动画线",
+    "加载",
+    "进场"
+  ],
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^24.0.1",
+    "@rollup/plugin-node-resolve": "^15.0.1",
+    "@rollup/plugin-terser": "^0.4.0",
+    "@rollup/plugin-typescript": "^11.0.0",
+    "chalk": "^5.2.0",
+    "concurrently": "^7.6.0",
+    "eslint": "^8.30.0",
+    "eslint-config-mdcs": "^5.0.0",
+    "eslint-plugin-compat": "^4.0.2",
+    "eslint-plugin-html": "^7.1.0",
+    "eslint-plugin-import": "^2.26.0",
+    "rollup": "^3.12.0",
+    "rollup-plugin-eslint": "^7.0.0",
+    "rollup-plugin-filesize": "^9.1.2",
+    "rollup-plugin-progress": "^1.1.2",
+    "rollup-plugin-visualizer": "^5.9.0",
+    "typedoc": "^0.23.24",
+    "typescript": "^4.9.4"
+  },
+  "author": "zhu18@vip.qq.com",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/zhu18/page-grow/issues"
+  },
+  "homepage": "https://github.com/zhu18/page-grow#readme",
+  "directories": {
+    "doc": "docs"
+  },
+  "dependencies": {
+    "gsap": "^3.11.4"
+  }
+}
