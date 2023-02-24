@@ -47,6 +47,7 @@ export default {
 				format: 'esm',
 				file: './dist/index.esm.js',
 				indent: '\t',
+				watch: true
 			}
 		]
 }

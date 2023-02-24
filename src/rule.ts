@@ -12,14 +12,14 @@ export declare interface IParserRule{
  * 左上到右下解析规则
  */
 export class LeftTopToRightBottomParserRule implements IParserRule{    
-    exec(elements:Array<IGrowHTMLElement>): void {
+    exec(elements:Array<IGrowElement>): void {
         //LeftTopToRightBottom 进场排序
-        elements.sort((a, b) => {
-            if (a.y !== b.y) {
-                return a.y - b.y;
-            }
-            return a.x - b.x;
-        });       
+        // elements.sort((a, b) => {
+        //     if (a.y !== b.y) {
+        //         return a.y - b.y;
+        //     }
+        //     return a.x - b.x;
+        // });       
     }   
 }
 
@@ -27,9 +27,11 @@ export class LeftTopToRightBottomParserRule implements IParserRule{
  * 上到下解析规则
  */
 export class TopToBottomParserRule implements IParserRule{    
-    exec(elements:Array<IGrowHTMLElement>): void {
+    exec(elements:Array<IGrowElement>): void {
           //CenterToAround 进场排序
-          elements.sort((a, b) => a.distance - b.distance);
+          elements = getOrderTopToBottom(elements)
+          console.log(elements)
+        //   elements.sort((a, b) => a.distance - b.distance);
     }   
 }
 
@@ -85,4 +87,53 @@ export enum EGrowType{
     LeftTopToRightBottom=5,
     CenterToAround=6
     // 待扩展..
+}
+
+function getOrderTopToBottom(elements:Array<IGrowElement>): Array<IGrowElement>{
+    let orderArr = orderTopToBottom(elements)
+    for(let i = 0; i < orderArr.length; i++){
+        for(let j = 0 ; j < orderArr[i].length; j++){
+            // let order: Array<IGrowHTMLElement> = []
+            // if(orderArr[i][j].children.length){
+            //     order = getOrderTopToBottom(orderArr[i][j].children)
+            // }
+            // orderArr[i][j].order = order
+            orderArr[i][j].children = getOrderTopToBottom(orderArr[i][j].children)
+        }
+    }
+    return orderArr
+}
+function orderTopToBottom(elements:Array<IGrowElement>): any{
+    let t, n = elements.length;
+    for(let i = 1; i < n; i++){
+        for(let j = 0; j < n-i; j++){
+            if(elements[j].y == elements[j+1].y && elements[j].x > elements[j+1].x){
+                t = elements[j];
+                elements[j]=elements[j+1];
+                elements[j+1]= t;
+            }else if(elements[j].y > elements[j+1].y){
+                t = elements[j];
+                elements[j]=elements[j+1];
+                elements[j+1]= t;
+            }
+        }
+    }
+    let newArr = []
+    for(let i = 0; i < elements.length; i++){
+        if(newArr.length){
+            let hasFlag = false
+            for(let m = 0; m < newArr.length; m++){
+                if(newArr[m][0].y === elements[i].y){
+                    newArr[m].push(elements[i])
+                    hasFlag = true
+                }
+            }
+            if(!hasFlag){
+                newArr.push([elements[i]])
+            }
+        }else {
+            newArr.push([elements[i]])
+        }
+    }
+    return newArr;
 }

@@ -54,10 +54,12 @@ export declare interface IGrowHTMLElement extends IGrowElement{
      * 原始对象<覆盖基类>
      */
     el:HTMLElement
+    children: Array<Array<IGrowHTMLElement>>
      /**
      * 动画对象<覆盖基类>
      */
     grow?:GrowTween
+    
 }
 
 

@@ -5,7 +5,7 @@
   "main": "build/index.module.js",
   "type": "module",
   "scripts": {
-    "build": "rollup -c ./build/rollup.config.mjs",
+    "build": "rollup -c ./build/rollup.config.mjs --watch",
     "start": "npm run dev"
   },
   "repository": {

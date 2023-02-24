@@ -38,7 +38,8 @@ export class GrowTimeLine extends gsap.core.Timeline{
  */
 export class HTMLGrowAnimateController implements IGrowAnimateController{
     constructor(elements:Array<IGrowHTMLElement>){
-        this._els=elements       
+        this._els = elements     
+        this._index = 0  
         //注册通用动画    
         this._registerEffects()
 
@@ -46,19 +47,23 @@ export class HTMLGrowAnimateController implements IGrowAnimateController{
         this._tl=new GrowTimeLine()
         //为所有元素初始化动画任务
         this._init()
+
+        
     }
-    private _els:Array<IGrowHTMLElement>    
+    private _els:Array<IGrowHTMLElement>
     private _tl:GrowTimeLine   
+    private _index:number
 
     private _init(){
         this._tl.addLabel('start')
+        this._tl.add(this._getTl(this._els))
         //规划动画线
         this._els.forEach((element)=>{
-            if(element.type!=EGrowElementType.none)
+            // if(element.type!=EGrowElementType.none)
                 // this._tl.to(element.el,{duration: .5,background:'#88ff88',opacity: 1},'>-.2')
                 // gsap.to(element.el,{duration: .5,background:'#88ff88',opacity: 1,delay:element.index*.2})
                 // let vars=this._getElementAnimate(element).vars
-                this._tl.to(element.el,{duration: .3,background:'#88ff88',opacity: 1},"start+="+(element.index*.1))
+                // this._tl.to(element.el,{duration: .3,background:'#88ff88',opacity: 1},"start+="+(element.index*.1))
                 // this._setElementAnimate(element)
                 // this._tl.to(element.el,{duration: 1, background:'blue',opacity: 1}, '>-0.5')
                 
@@ -67,7 +72,47 @@ export class HTMLGrowAnimateController implements IGrowAnimateController{
         })
         
     }
+    private _getTl(els: Array<IGrowHTMLElement>): GrowTimeLine{
+        
+        console.log(els)
+        let parentTl = new GrowTimeLine()
+        parentTl.addLabel('start')
+        for(let i = 0; i < els.length; i++){
+            let childTl = new GrowTimeLine()
+            childTl.addLabel('start')
+            if(els[i].children.length){
+                childTl = this._getTlRecurve(els[i].children)
+            }
+            parentTl.add(childTl, 'start+=0')
+        }
+        return parentTl
+    }
 
+    private _getTlRecurve(els: Array<Array<IGrowHTMLElement>>): GrowTimeLine{
+        let parentTl = new GrowTimeLine()
+        parentTl.addLabel('start')
+        
+        for(let i = 0; i < els.length; i++){
+            let childTl = new GrowTimeLine()
+            childTl.addLabel('start')
+            for(let j = 0; j < els[i].length; j++){
+                let tl = new GrowTimeLine()
+                if(this._index > 1){
+                    this._index = 0
+                    tl.add(gsap.fromTo(els[i][j].el,{opacity: 0}, {opacity: 1, duration: 0.5}))
+                }else {
+                    this._index++
+                    tl = this._getTlRecurve(els[i][j].children)
+                }
+                childTl.add(tl, 'start+=0')
+                    
+            }
+            parentTl.add(childTl, 'start+='+i*0.2)
+
+        }
+        return parentTl
+
+    }
     public get timeLine(): GrowTimeLine{
         return this._tl
     }
