@@ -5,7 +5,8 @@ import  {HTMLGrowAnimateController}  from './animate'
 
 export  interface PageGrowOption{
     target:any
-    growType:EGrowType
+    growType:EGrowType,
+    duration: number
 
 }
 
@@ -15,11 +16,12 @@ export class PageGrow{
 
     constructor(opt:PageGrowOption){
         //配置解析规则
-        const rule:IParserRule = RuleFactory.create({growType:<EGrowType>Number(opt.growType)})
+        // const rule:IParserRule = RuleFactory.create({growType:<EGrowType>Number(opt.growType)})
+        const rule:IParserRule = RuleFactory.create(opt)
         //构建解析器
         const parser:HTMLPageParser = new HTMLPageParser(rule)
         //开始解析
-        const els:Array<IGrowHTMLElement> = parser.parse(opt.target)
+        const els:Array<IGrowHTMLElement> = parser.parse(opt)
         //对象列表按类型预定动画方案
         this._animateController=new HTMLGrowAnimateController(els)
       

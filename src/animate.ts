@@ -72,14 +72,21 @@ export class HTMLGrowAnimateController implements IGrowAnimateController{
         })
         
     }
+
+    /**
+     * 获取动画线
+     * @param els 
+     * @returns GrowTimeLine
+     */
     private _getTl(els: Array<IGrowHTMLElement>): GrowTimeLine{
-        
-        console.log(els)
         let parentTl = new GrowTimeLine()
         parentTl.addLabel('start')
         for(let i = 0; i < els.length; i++){
             let childTl = new GrowTimeLine()
             childTl.addLabel('start')
+            /**----------------------------------------------判断els[i]类型增加元素动画-开始---------------------------- */
+            parentTl.add(this._setElementAnimate(els[i]), 'start+=0')
+            /**----------------------------------------------判断els[i]类型增加元素动画-结束---------------------------- */
             if(els[i].children.length){
                 childTl = this._getTlRecurve(els[i].children)
             }
@@ -88,6 +95,11 @@ export class HTMLGrowAnimateController implements IGrowAnimateController{
         return parentTl
     }
 
+    /**
+     * 递归获取子动画线
+     * @param els 
+     * @returns GrowTimeLine
+     */
     private _getTlRecurve(els: Array<Array<IGrowHTMLElement>>): GrowTimeLine{
         let parentTl = new GrowTimeLine()
         parentTl.addLabel('start')
@@ -95,19 +107,17 @@ export class HTMLGrowAnimateController implements IGrowAnimateController{
         for(let i = 0; i < els.length; i++){
             let childTl = new GrowTimeLine()
             childTl.addLabel('start')
+            
             for(let j = 0; j < els[i].length; j++){
                 let tl = new GrowTimeLine()
-                if(this._index > 1){
-                    this._index = 0
-                    tl.add(gsap.fromTo(els[i][j].el,{opacity: 0}, {opacity: 1, duration: 0.5}))
-                }else {
-                    this._index++
-                    tl = this._getTlRecurve(els[i][j].children)
-                }
-                childTl.add(tl, 'start+=0')
+                /**----------------------------------------------判断els[i][j]类型增加元素动画-开始---------------------------- */
+                tl.add(this._setElementAnimate(els[i][j]))
+                /**----------------------------------------------判断els[i][j]类型增加元素动画-结束---------------------------- */
+                // tl.add(gsap.fromTo(els[i][j].el,{opacity: 0, scale: 0}, {opacity: 1, scale: 1, transformOrigin: 'top center', duration: els[i][j].duration}))
+                childTl.add(tl, 'start+='+ els[i][j].startTime)
                     
             }
-            parentTl.add(childTl, 'start+='+i*0.2)
+            parentTl.add(childTl, 0)
 
         }
         return parentTl
@@ -131,10 +141,20 @@ export class HTMLGrowAnimateController implements IGrowAnimateController{
         let gt:GrowTween
         switch(element.type){
             case EGrowElementType.chart:
-                gt=new GrowTween(element.el,{duration: 1, background:'red',opacity: 1})
+                // gt=new GrowTween(element.el,{duration: 1, background:'red',opacity: 1})
+                gt = gsap.effects.chart(element.el, {duration: element.duration})
+                break;
+            case EGrowElementType.bg:
+                gt = gsap.effects.bg(element.el, {duration: element.duration})
                 break;
             case EGrowElementType.image:
-                gt=new GrowTween(element.el,{duration: 1, background:'blue',opacity: 1})
+                gt = gsap.effects.image(element.el, {duration: element.duration})
+                break;
+            case EGrowElementType.svg:
+                gt = gsap.effects.svg(element.el, {duration: element.duration})
+                break;
+            case EGrowElementType.video:
+                gt = gsap.effects.video(element.el, {duration: element.duration})
                 break;
             case EGrowElementType.string:
                 gt=new GrowTween(element.el,{duration: 1, color:'#ff9933',opacity: 1})
@@ -146,7 +166,6 @@ export class HTMLGrowAnimateController implements IGrowAnimateController{
                 gt=new GrowTween(element.el,{duration: 0,opacity: 1})
                 break
         }
-        gt.delay(element.index*.2)
         element.grow=gt
         return gt
     }
@@ -157,6 +176,34 @@ export class HTMLGrowAnimateController implements IGrowAnimateController{
         //chart
         gsap.registerEffect({
             name:'chart',
+            effect: (targets: gsap.TweenTarget, config: { duration: 1; }) => {
+                return gsap.to(targets, {duration: config.duration, opacity: 1});
+            },
+        })
+        //背景
+        gsap.registerEffect({
+            name:'bg',
+            effect: (targets: gsap.TweenTarget, config: { duration: 1; }) => {
+                return gsap.fromTo(targets, {opacity: 0, scale: 0}, {scale: 1, transformOrigin: 'top center', duration: config.duration, opacity: 1});
+            },
+        })
+        //svg
+        gsap.registerEffect({
+            name:'svg',
+            effect: (targets: gsap.TweenTarget, config: { duration: 1; }) => {
+                return gsap.to(targets, {duration: config.duration, opacity: 1});
+            },
+        })
+        //image
+        gsap.registerEffect({
+            name:'image',
+            effect: (targets: gsap.TweenTarget, config: { duration: 1; }) => {
+                return gsap.to(targets, {duration: config.duration, opacity: 1});
+            },
+        })
+        //video
+        gsap.registerEffect({
+            name:'video',
             effect: (targets: gsap.TweenTarget, config: { duration: 1; }) => {
                 return gsap.to(targets, {duration: config.duration, opacity: 1});
             },

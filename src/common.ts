@@ -8,8 +8,12 @@ export  enum EGrowElementType{
     string,    
     image,
     chart,
-    line,
     none,
+    svg,
+    bg,
+    audio,
+    video,
+    canvas
     //...
 }
 
@@ -27,11 +31,24 @@ export declare interface IGrowElement{
     /**
      * 原始对象
      */
-    el:object
+    el:object,
+    /**
+     * 动画开始时间
+     */
+     startTime: number,
+     /**
+      * 动画结束时间
+      */
+     endTime: number,
+     /**
+      * 动画时长
+      */
+     duration: number
     /**
      * 动画对象
      */
-    grow?:object
+    grow?:object,
+    
 }
 
 /**
@@ -54,11 +71,16 @@ export declare interface IGrowHTMLElement extends IGrowElement{
      * 原始对象<覆盖基类>
      */
     el:HTMLElement
-    children: Array<Array<IGrowHTMLElement>>
+    children: Array<Array<IGrowHTMLElement>>,
+    /**
+      * 动画时长
+      */
+     duration: number
      /**
      * 动画对象<覆盖基类>
      */
     grow?:GrowTween
+    
     
 }
 
