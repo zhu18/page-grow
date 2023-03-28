@@ -1,6 +1,23 @@
 import { IGrowElement, IGrowHTMLElement } from './common';
 import { PageGrowOption } from './engine';
 /**
+ * 解析规则配置
+ */
+export interface RuleOption {
+    growType: EGrowType;
+}
+/**
+ * 进场动画方式
+ */
+export declare enum EGrowType {
+    LeftToRight = 1,
+    RightToLeft = 2,
+    TopToBottom = 3,
+    BottomToTop = 4,
+    LeftTopToRightBottom = 5,
+    CenterToAround = 6
+}
+/**
  * 解析规则接口
  */
 export declare interface IParserRule {
@@ -35,21 +52,4 @@ export declare class CenterToAroundParserRule implements IParserRule {
  */
 export declare class RuleFactory {
     static create(opt: PageGrowOption): IParserRule;
-}
-/**
- * 解析规则配置
- */
-export interface RuleOption {
-    growType: EGrowType;
-}
-/**
- * 进场动画方式
- */
-export declare enum EGrowType {
-    LeftToRight = 1,
-    RightToLeft = 2,
-    TopToBottom = 3,
-    BottomToTop = 4,
-    LeftTopToRightBottom = 5,
-    CenterToAround = 6
 }

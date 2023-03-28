@@ -1,4 +1,5 @@
 import { IGrowHTMLElement } from "./common";
+import { PageGrowOption } from './engine';
 import { gsap } from "gsap";
 /**
  * 动画基础规则接口
@@ -29,10 +30,10 @@ export declare class GrowTimeLine extends gsap.core.Timeline {
  * 进出场动画控制器
  */
 export declare class HTMLGrowAnimateController implements IGrowAnimateController {
-    constructor(elements: Array<IGrowHTMLElement>);
+    constructor(elements: Array<IGrowHTMLElement>, opt: PageGrowOption);
     private _els;
     private _tl;
-    private _index;
+    private _option;
     private _init;
     /**
      * 获取动画线
@@ -52,4 +53,5 @@ export declare class HTMLGrowAnimateController implements IGrowAnimateController
     stop(): void;
     private _setElementAnimate;
     private _registerEffects;
+    private _getTransformOrigin;
 }

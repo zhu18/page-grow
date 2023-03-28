@@ -31,6 +31,17 @@ function __extends(d, b) {
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 }
 
+var __assign = function() {
+    __assign = Object.assign || function __assign(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p)) t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
+
 /**
  * 动画对象类型
  */
@@ -46,8 +57,16 @@ var EGrowElementType;
     EGrowElementType[EGrowElementType["audio"] = 7] = "audio";
     EGrowElementType[EGrowElementType["video"] = 8] = "video";
     EGrowElementType[EGrowElementType["canvas"] = 9] = "canvas";
+    EGrowElementType[EGrowElementType["bgString"] = 10] = "bgString";
+    EGrowElementType[EGrowElementType["bgNumber"] = 11] = "bgNumber";
+    EGrowElementType[EGrowElementType["style"] = 12] = "style";
     //...
 })(EGrowElementType || (EGrowElementType = {}));
+var StringGrowType;
+(function (StringGrowType) {
+    StringGrowType[StringGrowType["wave"] = 1] = "wave";
+    StringGrowType[StringGrowType["print"] = 2] = "print";
+})(StringGrowType || (StringGrowType = {}));
 
 /**
  * 解析器抽象类
@@ -92,16 +111,11 @@ var HTMLPageParser = /** @class */ (function (_super) {
      * @returns IGrowHTMLElement数组
      */
     HTMLPageParser.prototype.parse = function (opt) {
-        var _a, _b;
-        this._duration = (_a = opt.duration) !== null && _a !== void 0 ? _a : 3;
+        this._duration = opt.duration;
         //初始化所有元素基础信息
-        this._els = this._parseHTMLElementNew((_b = opt.target) !== null && _b !== void 0 ? _b : document.body);
+        this._els = this._parseHTMLElementNew(opt.target);
         //通过规则重新排序
         this._rule.exec(this._els);
-        //重置索引
-        // this._els.forEach((el,i)=>{
-        //     el.index=i
-        // })
         return this._els;
     };
     /**
@@ -140,7 +154,9 @@ var HTMLPageParser = /** @class */ (function (_super) {
     HTMLPageParser.prototype._parseHTMLElementNew = function (element) {
         var element_x = element.getBoundingClientRect().left, element_y = element.getBoundingClientRect().top, element_centerX = element_x + element.offsetWidth / 2, element_centerY = element_y + element.offsetHeight / 2, element_info = [];
         var el = this._getElement(element, element_x, element_y, element_centerX, element_centerY);
-        el.children = this._parseHTMLElementRecurve(element);
+        if ((el.type !== EGrowElementType.svg) && (el.type !== EGrowElementType.chart)) { // 当元素类型为svg/chart时，不遍历子元素
+            el.children = this._parseHTMLElementRecurve(element);
+        }
         el.duration = this._duration;
         element_info.push(el);
         return element_info;
@@ -162,10 +178,6 @@ var HTMLPageParser = /** @class */ (function (_super) {
             if (element_child[i].nodeName == 'SCRIPT') {
                 break;
             }
-            var child = [];
-            if (element_child[i].children.length) {
-                child = this._parseHTMLElementRecurve(element_child[i]);
-            }
             var x = element_child[i].getBoundingClientRect().left - element_x;
             var y = element_child[i].getBoundingClientRect().top - element_y;
             var w = (_a = element_child[i].offsetWidth) !== null && _a !== void 0 ? _a : element_child[i].scrollWidth;
@@ -173,6 +185,10 @@ var HTMLPageParser = /** @class */ (function (_super) {
             var centerX = x + w / 2;
             var centerY = y + h / 2;
             var el = this._getElement(element_child[i], x, y, centerX, centerY);
+            var child = [];
+            if (element_child[i].children.length && (el.type !== EGrowElementType.svg) && (el.type !== EGrowElementType.chart)) { // 当元素类型为svg/chart时，不遍历子元素
+                child = this._parseHTMLElementRecurve(element_child[i]);
+            }
             el.children = child;
             element_info.push(el);
         }
@@ -188,15 +204,35 @@ var HTMLPageParser = /** @class */ (function (_super) {
      * @returns
      */
     HTMLPageParser.prototype._getElement = function (el, x, y, centerX, centerY) {
-        var w = el.offsetWidth, h = el.offsetHeight;
-        // if(!(w && h)){
-        //     el.style.position = 'relative'
-        // }
-        // w = el.scrollWidth
-        // h = el.scrollHeight
-        // if(el.id == 'view'){
-        //     console.log(h)
-        // }
+        var _a, _b, _c, _d, _e, _f, _g;
+        // 当元素宽/高未设置为0时， 设置为相对定位，获取宽/高
+        var w = Number(window.getComputedStyle(el).width.replace("px", "")) || el.offsetWidth, h = Number(window.getComputedStyle(el).height.replace("px", "")) || el.offsetHeight;
+        if (!(w && h)) {
+            el.style.position = 'relative';
+            w = el.scrollWidth;
+            h = el.scrollHeight;
+        }
+        // 获取元素transform原始数值，因为动画是基于opacity、scale属性设置
+        var transformStr = window.getComputedStyle(el).transform;
+        var transformArr = [], scaleX = 1, scaleY = 1;
+        if (transformStr != 'none') {
+            if (transformStr.indexOf("matrix") > -1) {
+                transformArr = transformStr.substring(7).replace(")", "").split(",");
+                scaleX = (_a = Number(transformArr[0])) !== null && _a !== void 0 ? _a : 1;
+                scaleY = (_b = Number(transformArr[3])) !== null && _b !== void 0 ? _b : 1;
+            }
+            if (transformStr.indexOf("scale") > -1) {
+                transformArr = transformStr.substring(6).replace(")", "").split(",");
+                if (transformArr.length > 1) {
+                    scaleX = (_c = Number(transformArr[0])) !== null && _c !== void 0 ? _c : 1;
+                    scaleY = (_d = Number(transformArr[3])) !== null && _d !== void 0 ? _d : 1;
+                }
+                else {
+                    scaleX = (_e = Number(transformArr[0])) !== null && _e !== void 0 ? _e : 1;
+                    scaleY = (_f = Number(transformArr[0])) !== null && _f !== void 0 ? _f : 1;
+                }
+            }
+        }
         return {
             el: el,
             tagName: el.tagName,
@@ -206,13 +242,20 @@ var HTMLPageParser = /** @class */ (function (_super) {
             h: h,
             centerX: centerX,
             centerY: centerY,
-            type: this._getType(el),
             index: 0,
             distance: Math.sqrt(Math.pow(centerX - window.innerWidth / 2, 2) + Math.pow(centerY - window.innerHeight / 2, 2)),
             children: [],
             startTime: 0,
             endTime: 0,
-            duration: 0
+            duration: 0,
+            originalStyle: {
+                opacity: (_g = Number(window.getComputedStyle(el).opacity)) !== null && _g !== void 0 ? _g : 1,
+                scaleX: scaleX,
+                scaleY: scaleY,
+                transformOrigin: window.getComputedStyle(el).transformOrigin
+            },
+            type: this._getType(el),
+            grow: el.grow
         };
     };
     /**
@@ -226,17 +269,20 @@ var HTMLPageParser = /** @class */ (function (_super) {
             case "IMG":
                 etype = EGrowElementType.image;
                 break;
-            case "svg":
+            case "SVG":
                 etype = EGrowElementType.svg;
                 break;
-            case "video":
+            case "VIDEO":
                 etype = EGrowElementType.video;
                 break;
-            case "audio":
+            case "AUDIO":
                 etype = EGrowElementType.audio;
                 break;
-            case "canvas":
+            case "CANVAS":
                 etype = EGrowElementType.canvas;
+                break;
+            case "STYLE":
+                etype = EGrowElementType.style;
                 break;
         }
         var hasBg = window.getComputedStyle(el).backgroundColor != 'rgba(0, 0, 0, 0)' || window.getComputedStyle(el).backgroundImage != 'none';
@@ -249,21 +295,50 @@ var HTMLPageParser = /** @class */ (function (_super) {
             etype = EGrowElementType.chart;
         }
         //文本/数字
-        if (el.nodeType === 1 && el.children.length === 0 && el.innerText) {
-            if (isNaN(Number(el.innerText))) {
-                //字符串
-                etype = EGrowElementType.string;
+        if (el.nodeType === 1 && el.children.length === 0 && el.innerText && (etype !== EGrowElementType.style)) {
+            var text = el.innerText, isNum = isNaN(Number(text.replace(",", "")));
+            if (isNum) {
+                if (hasBg) {
+                    //字符串+背景
+                    etype = EGrowElementType.bgString;
+                }
+                else {
+                    //字符串
+                    etype = EGrowElementType.string;
+                }
             }
             else {
-                //数字
-                etype = EGrowElementType.number;
+                if (hasBg) {
+                    //数字+背景
+                    etype = EGrowElementType.bgNumber;
+                }
+                else {
+                    //数字
+                    etype = EGrowElementType.number;
+                }
             }
+        }
+        if (etype != EGrowElementType.none && (etype !== EGrowElementType.style)) {
+            el.style.opacity = 0;
         }
         return etype;
     };
     return HTMLPageParser;
 }(AbstractParser));
 
+/**
+ * 进场动画方式
+ */
+exports.EGrowType = void 0;
+(function (EGrowType) {
+    EGrowType[EGrowType["LeftToRight"] = 1] = "LeftToRight";
+    EGrowType[EGrowType["RightToLeft"] = 2] = "RightToLeft";
+    EGrowType[EGrowType["TopToBottom"] = 3] = "TopToBottom";
+    EGrowType[EGrowType["BottomToTop"] = 4] = "BottomToTop";
+    EGrowType[EGrowType["LeftTopToRightBottom"] = 5] = "LeftTopToRightBottom";
+    EGrowType[EGrowType["CenterToAround"] = 6] = "CenterToAround";
+    // 待扩展..
+})(exports.EGrowType || (exports.EGrowType = {}));
 /**
  * 左上到右下解析规则
  */
@@ -351,19 +426,6 @@ var RuleFactory = /** @class */ (function () {
     };
     return RuleFactory;
 }());
-/**
- * 进场动画方式
- */
-exports.EGrowType = void 0;
-(function (EGrowType) {
-    EGrowType[EGrowType["LeftToRight"] = 1] = "LeftToRight";
-    EGrowType[EGrowType["RightToLeft"] = 2] = "RightToLeft";
-    EGrowType[EGrowType["TopToBottom"] = 3] = "TopToBottom";
-    EGrowType[EGrowType["BottomToTop"] = 4] = "BottomToTop";
-    EGrowType[EGrowType["LeftTopToRightBottom"] = 5] = "LeftTopToRightBottom";
-    EGrowType[EGrowType["CenterToAround"] = 6] = "CenterToAround";
-    // 待扩展..
-})(exports.EGrowType || (exports.EGrowType = {}));
 /**
  * 从上到下——获取排序后的对象
  * @param elements 需排序的元素对象
@@ -6503,6 +6565,433 @@ var gsapWithCSS = gsap.registerPlugin(CSSPlugin) || gsap;
     // to protect from tree shaking
 gsapWithCSS.core.Tween;
 
+var commonjsGlobal = typeof globalThis !== 'undefined' ? globalThis : typeof window !== 'undefined' ? window : typeof global !== 'undefined' ? global : typeof self !== 'undefined' ? self : {};
+
+function getDefaultExportFromCjs (x) {
+	return x && x.__esModule && Object.prototype.hasOwnProperty.call(x, 'default') ? x['default'] : x;
+}
+
+var SplitText_minExports = {};
+var SplitText_min = {
+  get exports(){ return SplitText_minExports; },
+  set exports(v){ SplitText_minExports = v; },
+};
+
+/*!
+ * VERSION: beta 0.2.4
+ * DATE: 2014-07-17
+ * UPDATES AND DOCS AT: http://www.greensock.com
+ *
+ * @license Copyright (c) 2008-2014, GreenSock. All rights reserved.
+ * SplitText is a Club GreenSock membership benefit; You must have a valid membership to use
+ * this code without violating the terms of use. Visit http://www.greensock.com/club/ to sign up or get more details.
+ * This work is subject to the software agreement that was issued with your membership.
+ * 
+ * @author: Jack Doyle, jack@greensock.com
+ */
+
+(function (module) {
+	var _gsScope=module.exports&&"undefined"!=typeof commonjsGlobal?commonjsGlobal:commonjsGlobal||window;((function(t){var e=t.GreenSockGlobals||t,i=function(t){var i,s=t.split("."),r=e;for(i=0;s.length>i;i++)r[s[i]]=r=r[s[i]]||{};return r},s=i("com.greensock.utils"),r=function(t){var e=t.nodeType,i="";if(1===e||9===e||11===e){if("string"==typeof t.textContent)return t.textContent;for(t=t.firstChild;t;t=t.nextSibling)i+=r(t);}else if(3===e||4===e)return t.nodeValue;return i},n=document,a=n.defaultView?n.defaultView.getComputedStyle:function(){},o=/([A-Z])/g,h=function(t,e,i,s){var r;return (i=i||a(t,null))?(t=i.getPropertyValue(e.replace(o,"-$1").toLowerCase()),r=t||i.length?t:i[e]):t.currentStyle&&(i=t.currentStyle,r=i[e]),s?r:parseInt(r,10)||0},l=function(t){return t.length&&t[0]&&(t[0].nodeType&&t[0].style&&!t.nodeType||t[0].length&&t[0][0])?!0:!1},_=function(t){var e,i,s,r=[],n=t.length;for(e=0;n>e;e++)if(i=t[e],l(i))for(s=i.length,s=0;i.length>s;s++)r.push(i[s]);else r.push(i);return r},u=")eefec303079ad17405c",c=/(?:<br>|<br\/>|<br \/>)/gi,p=n.all&&!n.addEventListener,f="<div style='position:relative;display:inline-block;"+(p?"*display:inline;*zoom:1;'":"'"),m=function(t){t=t||"";var e=-1!==t.indexOf("++"),i=1;return e&&(t=t.split("++").join("")),function(){return f+(t?" class='"+t+(e?i++:"")+"'>":">")}},d=s.SplitText=e.SplitText=function(t,e){if("string"==typeof t&&(t=d.selector(t)),!t)throw "cannot split a null element.";this.elements=l(t)?_(t):[t],this.chars=[],this.words=[],this.lines=[],this._originals=[],this.vars=e||{},this.split(e);},g=function(t,e,i,s,o){c.test(t.innerHTML)&&(t.innerHTML=t.innerHTML.replace(c,u));var l,_,p,f,d,g,v,y,T,w,b,x,P,S=r(t),C=e.type||e.split||"chars,words,lines",k=-1!==C.indexOf("lines")?[]:null,R=-1!==C.indexOf("words"),A=-1!==C.indexOf("chars"),D="absolute"===e.position||e.absolute===!0,O=D?"&#173; ":" ",M=-999,L=a(t),z=h(t,"paddingLeft",L),I=h(t,"borderBottomWidth",L)+h(t,"borderTopWidth",L),E=h(t,"borderLeftWidth",L)+h(t,"borderRightWidth",L),N=h(t,"paddingTop",L)+h(t,"paddingBottom",L),F=h(t,"paddingLeft",L)+h(t,"paddingRight",L),X=h(t,"textAlign",L,!0),U=t.clientHeight,B=t.clientWidth,j=S.length,Y="</div>",q=m(e.wordsClass),G=m(e.charsClass),V=-1!==(e.linesClass||"").indexOf("++"),Q=e.linesClass;for(V&&(Q=Q.split("++").join("")),p=q(),f=0;j>f;f++)g=S.charAt(f),")"===g&&S.substr(f,20)===u?(p+=Y+"<BR/>",f!==j-1&&(p+=" "+q()),f+=19):" "===g&&" "!==S.charAt(f-1)&&f!==j-1?(p+=Y,f!==j-1&&(p+=O+q())):p+=A&&" "!==g?G()+g+"</div>":g;for(t.innerHTML=p+Y,d=t.getElementsByTagName("*"),j=d.length,v=[],f=0;j>f;f++)v[f]=d[f];if(k||D)for(f=0;j>f;f++)y=v[f],_=y.parentNode===t,(_||D||A&&!R)&&(T=y.offsetTop,k&&_&&T!==M&&"BR"!==y.nodeName&&(l=[],k.push(l),M=T),D&&(y._x=y.offsetLeft,y._y=T,y._w=y.offsetWidth,y._h=y.offsetHeight),k&&(R!==_&&A||(l.push(y),y._x-=z),_&&f&&(v[f-1]._wordEnd=!0)));for(f=0;j>f;f++)y=v[f],_=y.parentNode===t,"BR"!==y.nodeName?(D&&(b=y.style,R||_||(y._x+=y.parentNode._x,y._y+=y.parentNode._y),b.left=y._x+"px",b.top=y._y+"px",b.position="absolute",b.display="block",b.width=y._w+1+"px",b.height=y._h+"px"),R?_?s.push(y):A&&i.push(y):_?(t.removeChild(y),v.splice(f--,1),j--):!_&&A&&(T=!k&&!D&&y.nextSibling,t.appendChild(y),T||t.appendChild(n.createTextNode(" ")),i.push(y))):k||D?(t.removeChild(y),v.splice(f--,1),j--):R||t.appendChild(y);if(k){for(D&&(w=n.createElement("div"),t.appendChild(w),x=w.offsetWidth+"px",T=w.offsetParent===t?0:t.offsetLeft,t.removeChild(w)),b=t.style.cssText,t.style.cssText="display:none;";t.firstChild;)t.removeChild(t.firstChild);for(P=!D||!R&&!A,f=0;k.length>f;f++){for(l=k[f],w=n.createElement("div"),w.style.cssText="display:block;text-align:"+X+";position:"+(D?"absolute;":"relative;"),Q&&(w.className=Q+(V?f+1:"")),o.push(w),j=l.length,d=0;j>d;d++)"BR"!==l[d].nodeName&&(y=l[d],w.appendChild(y),P&&(y._wordEnd||R)&&w.appendChild(n.createTextNode(" ")),D&&(0===d&&(w.style.top=y._y+"px",w.style.left=z+T+"px"),y.style.top="0px",T&&(y.style.left=y._x-T+"px")));R||A||(w.innerHTML=r(w).split(String.fromCharCode(160)).join(" ")),D&&(w.style.width=x,w.style.height=y._h+"px"),t.appendChild(w);}t.style.cssText=b;}D&&(U>t.clientHeight&&(t.style.height=U-N+"px",U>t.clientHeight&&(t.style.height=U+I+"px")),B>t.clientWidth&&(t.style.width=B-F+"px",B>t.clientWidth&&(t.style.width=B+E+"px")));},v=d.prototype;v.split=function(t){this.isSplit&&this.revert(),this.vars=t||this.vars,this._originals.length=this.chars.length=this.words.length=this.lines.length=0;for(var e=0;this.elements.length>e;e++)this._originals[e]=this.elements[e].innerHTML,g(this.elements[e],this.vars,this.chars,this.words,this.lines);return this.isSplit=!0,this},v.revert=function(){if(!this._originals)throw "revert() call wasn't scoped properly.";for(var t=this._originals.length;--t>-1;)this.elements[t].innerHTML=this._originals[t];return this.chars=[],this.words=[],this.lines=[],this.isSplit=!1,this},d.selector=t.$||t.jQuery||function(e){return t.$?(d.selector=t.$,t.$(e)):n?n.getElementById("#"===e.charAt(0)?e.substr(1):e):e},d.version="0.2.4";}))(_gsScope),function(t){var e=function(){return (_gsScope.GreenSockGlobals||_gsScope)[t]};module.exports&&(module.exports=e());}("SplitText");
+} (SplitText_min));
+
+var SplitText = SplitText_minExports;
+
+var ScrambleTextPlugin3_minExports = {};
+var ScrambleTextPlugin3_min = {
+  get exports(){ return ScrambleTextPlugin3_minExports; },
+  set exports(v){ ScrambleTextPlugin3_minExports = v; },
+};
+
+/*!
+ * ScrambleTextPlugin 3.8.0
+ * https://greensock.com
+ *
+ * @license Copyright 2021, GreenSock. All rights reserved.
+ * Subject to the terms at https://greensock.com/standard-license or for Club GreenSock members, the agreement issued with that membership.
+ * @author: Jack Doyle, jack@greensock.com
+ */
+
+(function (module, exports) {
+	!(function (D, u) {
+	  u(exports)
+	    ;
+	})(commonjsGlobal, function (D) {
+	  var r = /(^\s+|\s+$)/g,
+	    o =
+	      /([\uD800-\uDBFF][\uDC00-\uDFFF](?:[\u200D\uFE0F][\uD800-\uDBFF][\uDC00-\uDFFF]){2,}|\uD83D\uDC69(?:\u200D(?:(?:\uD83D\uDC69\u200D)?\uD83D\uDC67|(?:\uD83D\uDC69\u200D)?\uD83D\uDC66)|\uD83C[\uDFFB-\uDFFF])|\uD83D\uDC69\u200D(?:\uD83D\uDC69\u200D)?\uD83D\uDC66\u200D\uD83D\uDC66|\uD83D\uDC69\u200D(?:\uD83D\uDC69\u200D)?\uD83D\uDC67\u200D(?:\uD83D[\uDC66\uDC67])|\uD83C\uDFF3\uFE0F\u200D\uD83C\uDF08|(?:\uD83C[\uDFC3\uDFC4\uDFCA]|\uD83D[\uDC6E\uDC71\uDC73\uDC77\uDC81\uDC82\uDC86\uDC87\uDE45-\uDE47\uDE4B\uDE4D\uDE4E\uDEA3\uDEB4-\uDEB6]|\uD83E[\uDD26\uDD37-\uDD39\uDD3D\uDD3E\uDDD6-\uDDDD])(?:\uD83C[\uDFFB-\uDFFF])\u200D[\u2640\u2642]\uFE0F|\uD83D\uDC69(?:\uD83C[\uDFFB-\uDFFF])\u200D(?:\uD83C[\uDF3E\uDF73\uDF93\uDFA4\uDFA8\uDFEB\uDFED]|\uD83D[\uDCBB\uDCBC\uDD27\uDD2C\uDE80\uDE92])|(?:\uD83C[\uDFC3\uDFC4\uDFCA]|\uD83D[\uDC6E\uDC6F\uDC71\uDC73\uDC77\uDC81\uDC82\uDC86\uDC87\uDE45-\uDE47\uDE4B\uDE4D\uDE4E\uDEA3\uDEB4-\uDEB6]|\uD83E[\uDD26\uDD37-\uDD39\uDD3C-\uDD3E\uDDD6-\uDDDF])\u200D[\u2640\u2642]\uFE0F|\uD83C\uDDFD\uD83C\uDDF0|\uD83C\uDDF6\uD83C\uDDE6|\uD83C\uDDF4\uD83C\uDDF2|\uD83C\uDDE9(?:\uD83C[\uDDEA\uDDEC\uDDEF\uDDF0\uDDF2\uDDF4\uDDFF])|\uD83C\uDDF7(?:\uD83C[\uDDEA\uDDF4\uDDF8\uDDFA\uDDFC])|\uD83C\uDDE8(?:\uD83C[\uDDE6\uDDE8\uDDE9\uDDEB-\uDDEE\uDDF0-\uDDF5\uDDF7\uDDFA-\uDDFF])|(?:\u26F9|\uD83C[\uDFCB\uDFCC]|\uD83D\uDD75)(?:\uFE0F\u200D[\u2640\u2642]|(?:\uD83C[\uDFFB-\uDFFF])\u200D[\u2640\u2642])\uFE0F|(?:\uD83D\uDC41\uFE0F\u200D\uD83D\uDDE8|\uD83D\uDC69(?:\uD83C[\uDFFB-\uDFFF])\u200D[\u2695\u2696\u2708]|\uD83D\uDC69\u200D[\u2695\u2696\u2708]|\uD83D\uDC68(?:(?:\uD83C[\uDFFB-\uDFFF])\u200D[\u2695\u2696\u2708]|\u200D[\u2695\u2696\u2708]))\uFE0F|\uD83C\uDDF2(?:\uD83C[\uDDE6\uDDE8-\uDDED\uDDF0-\uDDFF])|\uD83D\uDC69\u200D(?:\uD83C[\uDF3E\uDF73\uDF93\uDFA4\uDFA8\uDFEB\uDFED]|\uD83D[\uDCBB\uDCBC\uDD27\uDD2C\uDE80\uDE92]|\u2764\uFE0F\u200D(?:\uD83D\uDC8B\u200D(?:\uD83D[\uDC68\uDC69])|\uD83D[\uDC68\uDC69]))|\uD83C\uDDF1(?:\uD83C[\uDDE6-\uDDE8\uDDEE\uDDF0\uDDF7-\uDDFB\uDDFE])|\uD83C\uDDEF(?:\uD83C[\uDDEA\uDDF2\uDDF4\uDDF5])|\uD83C\uDDED(?:\uD83C[\uDDF0\uDDF2\uDDF3\uDDF7\uDDF9\uDDFA])|\uD83C\uDDEB(?:\uD83C[\uDDEE-\uDDF0\uDDF2\uDDF4\uDDF7])|[#\*0-9]\uFE0F\u20E3|\uD83C\uDDE7(?:\uD83C[\uDDE6\uDDE7\uDDE9-\uDDEF\uDDF1-\uDDF4\uDDF6-\uDDF9\uDDFB\uDDFC\uDDFE\uDDFF])|\uD83C\uDDE6(?:\uD83C[\uDDE8-\uDDEC\uDDEE\uDDF1\uDDF2\uDDF4\uDDF6-\uDDFA\uDDFC\uDDFD\uDDFF])|\uD83C\uDDFF(?:\uD83C[\uDDE6\uDDF2\uDDFC])|\uD83C\uDDF5(?:\uD83C[\uDDE6\uDDEA-\uDDED\uDDF0-\uDDF3\uDDF7-\uDDF9\uDDFC\uDDFE])|\uD83C\uDDFB(?:\uD83C[\uDDE6\uDDE8\uDDEA\uDDEC\uDDEE\uDDF3\uDDFA])|\uD83C\uDDF3(?:\uD83C[\uDDE6\uDDE8\uDDEA-\uDDEC\uDDEE\uDDF1\uDDF4\uDDF5\uDDF7\uDDFA\uDDFF])|\uD83C\uDFF4\uDB40\uDC67\uDB40\uDC62(?:\uDB40\uDC77\uDB40\uDC6C\uDB40\uDC73|\uDB40\uDC73\uDB40\uDC63\uDB40\uDC74|\uDB40\uDC65\uDB40\uDC6E\uDB40\uDC67)\uDB40\uDC7F|\uD83D\uDC68(?:\u200D(?:\u2764\uFE0F\u200D(?:\uD83D\uDC8B\u200D)?\uD83D\uDC68|(?:(?:\uD83D[\uDC68\uDC69])\u200D)?\uD83D\uDC66\u200D\uD83D\uDC66|(?:(?:\uD83D[\uDC68\uDC69])\u200D)?\uD83D\uDC67\u200D(?:\uD83D[\uDC66\uDC67])|\uD83C[\uDF3E\uDF73\uDF93\uDFA4\uDFA8\uDFEB\uDFED]|\uD83D[\uDCBB\uDCBC\uDD27\uDD2C\uDE80\uDE92])|(?:\uD83C[\uDFFB-\uDFFF])\u200D(?:\uD83C[\uDF3E\uDF73\uDF93\uDFA4\uDFA8\uDFEB\uDFED]|\uD83D[\uDCBB\uDCBC\uDD27\uDD2C\uDE80\uDE92]))|\uD83C\uDDF8(?:\uD83C[\uDDE6-\uDDEA\uDDEC-\uDDF4\uDDF7-\uDDF9\uDDFB\uDDFD-\uDDFF])|\uD83C\uDDF0(?:\uD83C[\uDDEA\uDDEC-\uDDEE\uDDF2\uDDF3\uDDF5\uDDF7\uDDFC\uDDFE\uDDFF])|\uD83C\uDDFE(?:\uD83C[\uDDEA\uDDF9])|\uD83C\uDDEE(?:\uD83C[\uDDE8-\uDDEA\uDDF1-\uDDF4\uDDF6-\uDDF9])|\uD83C\uDDF9(?:\uD83C[\uDDE6\uDDE8\uDDE9\uDDEB-\uDDED\uDDEF-\uDDF4\uDDF7\uDDF9\uDDFB\uDDFC\uDDFF])|\uD83C\uDDEC(?:\uD83C[\uDDE6\uDDE7\uDDE9-\uDDEE\uDDF1-\uDDF3\uDDF5-\uDDFA\uDDFC\uDDFE])|\uD83C\uDDFA(?:\uD83C[\uDDE6\uDDEC\uDDF2\uDDF3\uDDF8\uDDFE\uDDFF])|\uD83C\uDDEA(?:\uD83C[\uDDE6\uDDE8\uDDEA\uDDEC\uDDED\uDDF7-\uDDFA])|\uD83C\uDDFC(?:\uD83C[\uDDEB\uDDF8])|(?:\u26F9|\uD83C[\uDFCB\uDFCC]|\uD83D\uDD75)(?:\uD83C[\uDFFB-\uDFFF])|(?:\uD83C[\uDFC3\uDFC4\uDFCA]|\uD83D[\uDC6E\uDC71\uDC73\uDC77\uDC81\uDC82\uDC86\uDC87\uDE45-\uDE47\uDE4B\uDE4D\uDE4E\uDEA3\uDEB4-\uDEB6]|\uD83E[\uDD26\uDD37-\uDD39\uDD3D\uDD3E\uDDD6-\uDDDD])(?:\uD83C[\uDFFB-\uDFFF])|(?:[\u261D\u270A-\u270D]|\uD83C[\uDF85\uDFC2\uDFC7]|\uD83D[\uDC42\uDC43\uDC46-\uDC50\uDC66\uDC67\uDC70\uDC72\uDC74-\uDC76\uDC78\uDC7C\uDC83\uDC85\uDCAA\uDD74\uDD7A\uDD90\uDD95\uDD96\uDE4C\uDE4F\uDEC0\uDECC]|\uD83E[\uDD18-\uDD1C\uDD1E\uDD1F\uDD30-\uDD36\uDDD1-\uDDD5])(?:\uD83C[\uDFFB-\uDFFF])|\uD83D\uDC68(?:\u200D(?:(?:(?:\uD83D[\uDC68\uDC69])\u200D)?\uD83D\uDC67|(?:(?:\uD83D[\uDC68\uDC69])\u200D)?\uD83D\uDC66)|\uD83C[\uDFFB-\uDFFF])|(?:[\u261D\u26F9\u270A-\u270D]|\uD83C[\uDF85\uDFC2-\uDFC4\uDFC7\uDFCA-\uDFCC]|\uD83D[\uDC42\uDC43\uDC46-\uDC50\uDC66-\uDC69\uDC6E\uDC70-\uDC78\uDC7C\uDC81-\uDC83\uDC85-\uDC87\uDCAA\uDD74\uDD75\uDD7A\uDD90\uDD95\uDD96\uDE45-\uDE47\uDE4B-\uDE4F\uDEA3\uDEB4-\uDEB6\uDEC0\uDECC]|\uD83E[\uDD18-\uDD1C\uDD1E\uDD1F\uDD26\uDD30-\uDD39\uDD3D\uDD3E\uDDD1-\uDDDD])(?:\uD83C[\uDFFB-\uDFFF])?|(?:[\u231A\u231B\u23E9-\u23EC\u23F0\u23F3\u25FD\u25FE\u2614\u2615\u2648-\u2653\u267F\u2693\u26A1\u26AA\u26AB\u26BD\u26BE\u26C4\u26C5\u26CE\u26D4\u26EA\u26F2\u26F3\u26F5\u26FA\u26FD\u2705\u270A\u270B\u2728\u274C\u274E\u2753-\u2755\u2757\u2795-\u2797\u27B0\u27BF\u2B1B\u2B1C\u2B50\u2B55]|\uD83C[\uDC04\uDCCF\uDD8E\uDD91-\uDD9A\uDDE6-\uDDFF\uDE01\uDE1A\uDE2F\uDE32-\uDE36\uDE38-\uDE3A\uDE50\uDE51\uDF00-\uDF20\uDF2D-\uDF35\uDF37-\uDF7C\uDF7E-\uDF93\uDFA0-\uDFCA\uDFCF-\uDFD3\uDFE0-\uDFF0\uDFF4\uDFF8-\uDFFF]|\uD83D[\uDC00-\uDC3E\uDC40\uDC42-\uDCFC\uDCFF-\uDD3D\uDD4B-\uDD4E\uDD50-\uDD67\uDD7A\uDD95\uDD96\uDDA4\uDDFB-\uDE4F\uDE80-\uDEC5\uDECC\uDED0-\uDED2\uDEEB\uDEEC\uDEF4-\uDEF8]|\uD83E[\uDD10-\uDD3A\uDD3C-\uDD3E\uDD40-\uDD45\uDD47-\uDD4C\uDD50-\uDD6B\uDD80-\uDD97\uDDC0\uDDD0-\uDDE6])|(?:[#\*0-9\xA9\xAE\u203C\u2049\u2122\u2139\u2194-\u2199\u21A9\u21AA\u231A\u231B\u2328\u23CF\u23E9-\u23F3\u23F8-\u23FA\u24C2\u25AA\u25AB\u25B6\u25C0\u25FB-\u25FE\u2600-\u2604\u260E\u2611\u2614\u2615\u2618\u261D\u2620\u2622\u2623\u2626\u262A\u262E\u262F\u2638-\u263A\u2640\u2642\u2648-\u2653\u2660\u2663\u2665\u2666\u2668\u267B\u267F\u2692-\u2697\u2699\u269B\u269C\u26A0\u26A1\u26AA\u26AB\u26B0\u26B1\u26BD\u26BE\u26C4\u26C5\u26C8\u26CE\u26CF\u26D1\u26D3\u26D4\u26E9\u26EA\u26F0-\u26F5\u26F7-\u26FA\u26FD\u2702\u2705\u2708-\u270D\u270F\u2712\u2714\u2716\u271D\u2721\u2728\u2733\u2734\u2744\u2747\u274C\u274E\u2753-\u2755\u2757\u2763\u2764\u2795-\u2797\u27A1\u27B0\u27BF\u2934\u2935\u2B05-\u2B07\u2B1B\u2B1C\u2B50\u2B55\u3030\u303D\u3297\u3299]|\uD83C[\uDC04\uDCCF\uDD70\uDD71\uDD7E\uDD7F\uDD8E\uDD91-\uDD9A\uDDE6-\uDDFF\uDE01\uDE02\uDE1A\uDE2F\uDE32-\uDE3A\uDE50\uDE51\uDF00-\uDF21\uDF24-\uDF93\uDF96\uDF97\uDF99-\uDF9B\uDF9E-\uDFF0\uDFF3-\uDFF5\uDFF7-\uDFFF]|\uD83D[\uDC00-\uDCFD\uDCFF-\uDD3D\uDD49-\uDD4E\uDD50-\uDD67\uDD6F\uDD70\uDD73-\uDD7A\uDD87\uDD8A-\uDD8D\uDD90\uDD95\uDD96\uDDA4\uDDA5\uDDA8\uDDB1\uDDB2\uDDBC\uDDC2-\uDDC4\uDDD1-\uDDD3\uDDDC-\uDDDE\uDDE1\uDDE3\uDDE8\uDDEF\uDDF3\uDDFA-\uDE4F\uDE80-\uDEC5\uDECB-\uDED2\uDEE0-\uDEE5\uDEE9\uDEEB\uDEEC\uDEF0\uDEF3-\uDEF8]|\uD83E[\uDD10-\uDD3A\uDD3C-\uDD3E\uDD40-\uDD45\uDD47-\uDD4C\uDD50-\uDD6B\uDD80-\uDD97\uDDC0\uDDD0-\uDDE6])\uFE0F)/;
+	  function getText(D) {
+	    var u = D.nodeType,
+	      F = "";
+	    if (1 === u || 9 === u || 11 === u) {
+	      if ("string" == typeof D.textContent) return D.textContent;
+	      for (D = D.firstChild; D; D = D.nextSibling) F += getText(D);
+	    } else if (3 === u || 4 === u) return D.nodeValue;
+	    return F;
+	  }
+	  function emojiSafeSplit(D, u, F) {
+	    if (((D += ""), F && (D = D.replace(r, "")), u && "" !== u))
+	      return D.replace(/>/g, "&gt;").replace(/</g, "&lt;").split(u);
+	    for (var C, e, E = [], t = D.length, n = 0; n < t; n++)
+	      ((55296 <= (e = D.charAt(n)).charCodeAt(0) && e.charCodeAt(0) <= 56319) ||
+	        (65024 <= D.charCodeAt(n + 1) && D.charCodeAt(n + 1) <= 65039)) &&
+	        ((C = ((D.substr(n, 12).split(o) || [])[1] || "").length || 2),
+	        (e = D.substr(n, C)),
+	        (n += C - (E.emoji = 1))),
+	        E.push(">" === e ? "&gt;" : "<" === e ? "&lt;" : e);
+	    return E;
+	  }
+	  var s =
+	    ((CharSet.prototype.grow = function grow(D) {
+	      for (var u = 0; u < 20; u++)
+	        this.sets[u] += F(D - this.length, this.chars);
+	      this.length = D;
+	    }),
+	    CharSet);
+	  function CharSet(D) {
+	    (this.chars = emojiSafeSplit(D)), (this.sets = []), (this.length = 50);
+	    for (var u = 0; u < 20; u++) this.sets[u] = F(80, this.chars);
+	  }
+	  function i() {
+	    return (
+	      e ||
+	      ("undefined" != typeof window &&
+	        (e = window.gsap) &&
+	        e.registerPlugin &&
+	        e)
+	    );
+	  }
+	  function l() {
+	    return String.fromCharCode.apply(null, arguments);
+	  }
+	  function t() {
+	    a = e = i();
+	  }
+	  var e,
+	    a,
+	    n = l(103, 114, 101, 101, 110, 115, 111, 99, 107, 46, 99, 111, 109),
+	    B = (function (D) {
+	      0 ===
+	            (window ? window.location.href : "").indexOf(
+	              l(102, 105, 108, 101, 58, 47, 47)
+	            ) ||
+	          -1 !== D.indexOf(l(108, 111, 99, 97, 108, 104, 111, 115, 116)) ||
+	          -1 !== D.indexOf(l(49, 50, 55, 46, 48, 32, 48, 46, 49));
+	        [
+	          n,
+	          l(99, 111, 100, 101, 112, 101, 110, 46, 105, 111),
+	          l(
+	            99,
+	            111,
+	            100,
+	            101,
+	            112,
+	            101,
+	            110,
+	            46,
+	            112,
+	            108,
+	            117,
+	            109,
+	            98,
+	            105,
+	            110,
+	            103
+	          ),
+	          l(99, 111, 100, 101, 112, 101, 110, 46, 100, 101, 118),
+	          l(99, 111, 100, 101, 112, 101, 110, 46, 97, 112, 112),
+	          l(112, 101, 110, 115, 46, 99, 108, 111, 117, 100),
+	          l(99, 115, 115, 45, 116, 114, 105, 99, 107, 115, 46, 99, 111, 109),
+	          l(99, 100, 112, 110, 46, 105, 111),
+	          l(112, 101, 110, 115, 46, 105, 111),
+	          l(103, 97, 110, 110, 111, 110, 46, 116, 118),
+	          l(99, 111, 100, 101, 99, 97, 110, 121, 111, 110, 46, 110, 101, 116),
+	          l(
+	            116,
+	            104,
+	            101,
+	            109,
+	            101,
+	            102,
+	            111,
+	            114,
+	            101,
+	            115,
+	            116,
+	            46,
+	            110,
+	            101,
+	            116
+	          ),
+	          l(99, 101, 114, 101, 98, 114, 97, 120, 46, 99, 111, 46, 117, 107),
+	          l(116, 121, 109, 112, 97, 110, 117, 115, 46, 110, 101, 116),
+	          l(116, 119, 101, 101, 110, 109, 97, 120, 46, 99, 111, 109),
+	          l(116, 119, 101, 101, 110, 108, 105, 116, 101, 46, 99, 111, 109),
+	          l(112, 108, 110, 107, 114, 46, 99, 111),
+	          l(104, 111, 116, 106, 97, 114, 46, 99, 111, 109),
+	          l(119, 101, 98, 112, 97, 99, 107, 98, 105, 110, 46, 99, 111, 109),
+	          l(97, 114, 99, 104, 105, 118, 101, 46, 111, 114, 103),
+	          l(99, 111, 100, 101, 115, 97, 110, 100, 98, 111, 120, 46, 105, 111),
+	          l(99, 115, 98, 46, 97, 112, 112),
+	          l(115, 116, 97, 99, 107, 98, 108, 105, 116, 122, 46, 99, 111, 109),
+	          l(99, 111, 100, 105, 101, 114, 46, 105, 111),
+	          l(
+	            109,
+	            111,
+	            116,
+	            105,
+	            111,
+	            110,
+	            116,
+	            114,
+	            105,
+	            99,
+	            107,
+	            115,
+	            46,
+	            99,
+	            111,
+	            109
+	          ),
+	          l(
+	            115,
+	            116,
+	            97,
+	            99,
+	            107,
+	            111,
+	            118,
+	            101,
+	            114,
+	            102,
+	            108,
+	            111,
+	            119,
+	            46,
+	            99,
+	            111,
+	            109
+	          ),
+	          l(
+	            115,
+	            116,
+	            97,
+	            99,
+	            107,
+	            101,
+	            120,
+	            99,
+	            104,
+	            97,
+	            110,
+	            103,
+	            101,
+	            46,
+	            99,
+	            111,
+	            109
+	          ),
+	          l(106, 115, 102, 105, 100, 100, 108, 101, 46, 110, 101, 116),
+	        ];
+	     
+	    })(window ? window.location.host : ""),
+	    A = /\s+/g,
+	    F = function _scrambleText(D, u) {
+	      for (var F = u.length, C = ""; -1 < --D; ) C += u[~~(Math.random() * F)];
+	      return C;
+	    },
+	    u = "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+	    C = u.toLowerCase(),
+	    h = {
+	      upperCase: new s(u),
+	      lowerCase: new s(C),
+	      upperAndLowerCase: new s(u + C),
+	    },
+	    f = {
+	      version: "3.8.0",
+	      name: "scrambleText",
+	      register: function register(D) {
+	        (e = D), t();
+	      },
+	      init: function init(D, u, F) {
+	        if (
+	          (a || t(),
+	          (this.prop =
+	            "innerHTML" in D
+	              ? "innerHTML"
+	              : "textContent" in D
+	              ? "textContent"
+	              : 0),
+	          this.prop)
+	        ) {
+	          (this.target = D), "object" != typeof u && (u = { text: u });
+	          var C,
+	            e,
+	            E,
+	            n,
+	            i = u.text || u.value || "",
+	            l = !1 !== u.trim,
+	            r = this;
+	          return (
+	            (r.delimiter = C = u.delimiter || ""),
+	            (r.original = emojiSafeSplit(
+	              getText(D).replace(A, " ").split("&nbsp;").join(""),
+	              C,
+	              l
+	            )),
+	            ("{original}" !== i && !0 !== i && null != i) ||
+	              (i = r.original.join(C)),
+	            (r.text = emojiSafeSplit((i || "").replace(A, " "), C, l)),
+	            (r.hasClass = !(!u.newClass && !u.oldClass)),
+	            (r.newClass = u.newClass),
+	            (r.oldClass = u.oldClass),
+	            (n = "" === C),
+	            (r.textHasEmoji = n && !!r.text.emoji),
+	            (r.charsHaveEmoji = !!u.chars && !!emojiSafeSplit(u.chars).emoji),
+	            (r.length = n ? r.original.length : r.original.join(C).length),
+	            (r.lengthDif =
+	              (n ? r.text.length : r.text.join(C).length) - r.length),
+	            (r.fillChar =
+	              u.fillChar || (u.chars && ~u.chars.indexOf(" ")) ? "&nbsp;" : ""),
+	            (r.charSet = E = h[u.chars || "upperCase"] || new s(u.chars)),
+	            (r.speed = 0.05 / (u.speed || 1)),
+	            (r.prevScrambleTime = 0),
+	            (r.setIndex = (20 * Math.random()) | 0),
+	            (e = r.length + Math.max(r.lengthDif, 0)) > E.length && E.grow(e),
+	            (r.chars = E.sets[r.setIndex]),
+	            (r.revealDelay = u.revealDelay || 0),
+	            (r.tweenLength = !1 !== u.tweenLength),
+	            (r.tween = F),
+	            (r.rightToLeft = !!u.rightToLeft),
+	            r._props.push("scrambleText", "text"),
+	            B
+	          );
+	        }
+	      },
+	      render: function render(D, u) {
+	        var F,
+	          C,
+	          e,
+	          E,
+	          t,
+	          n,
+	          i,
+	          l,
+	          r,
+	          o,
+	          s,
+	          a = u.target,
+	          B = u.prop,
+	          A = u.text,
+	          h = u.delimiter,
+	          f = u.tween,
+	          p = u.prevScrambleTime,
+	          c = u.revealDelay,
+	          g = u.setIndex,
+	          d = u.chars,
+	          m = u.charSet,
+	          w = u.length,
+	          x = u.textHasEmoji,
+	          S = u.charsHaveEmoji,
+	          j = u.lengthDif,
+	          v = u.tweenLength,
+	          T = u.oldClass,
+	          b = u.newClass,
+	          _ = u.rightToLeft,
+	          y = u.fillChar,
+	          L = u.speed,
+	          M = u.original,
+	          O = u.hasClass,
+	          H = A.length,
+	          P = f._time,
+	          I = P - p;
+	        c &&
+	          (f._from && (P = f._dur - P),
+	          (D =
+	            0 === P
+	              ? 0
+	              : P < c
+	              ? 1e-6
+	              : P === f._dur
+	              ? 1
+	              : f._ease((P - c) / (f._dur - c)))),
+	          D < 0 ? (D = 0) : 1 < D && (D = 1),
+	          _ && (D = 1 - D),
+	          (F = ~~(D * H + 0.5)),
+	          (E = D
+	            ? ((L < I || I < -L) &&
+	                ((u.setIndex = g = (g + ((19 * Math.random()) | 0)) % 20),
+	                (u.chars = m.sets[g]),
+	                (u.prevScrambleTime += I)),
+	              d)
+	            : M.join(h)),
+	          (s = f._from ? D : 1 - D),
+	          (o = w + (v ? (f._from ? s * s * s : 1 - s * s * s) : 1) * j),
+	          (E = _
+	            ? 1 !== D || (!f._from && "isFromStart" !== f.data)
+	              ? ((i = A.slice(F).join(h)),
+	                (e = S
+	                  ? emojiSafeSplit(E)
+	                      .slice(
+	                        0,
+	                        (o - (x ? emojiSafeSplit(i) : i).length + 0.5) | 0
+	                      )
+	                      .join("")
+	                  : E.substr(
+	                      0,
+	                      (o - (x ? emojiSafeSplit(i) : i).length + 0.5) | 0
+	                    )),
+	                i)
+	              : ((e = ""), M.join(h))
+	            : ((e = A.slice(0, F).join(h)),
+	              (C = (x ? emojiSafeSplit(e) : e).length),
+	              S
+	                ? emojiSafeSplit(E)
+	                    .slice(C, (o + 0.5) | 0)
+	                    .join("")
+	                : E.substr(C, (o - C + 0.5) | 0))),
+	          (i = O
+	            ? ((t = (l = _ ? T : b) && 0 != F)
+	                ? "<span class='" + l + "'>"
+	                : "") +
+	              e +
+	              (t ? "</span>" : "") +
+	              ((n = (r = _ ? b : T) && F !== H)
+	                ? "<span class='" + r + "'>"
+	                : "") +
+	              h +
+	              E +
+	              (n ? "</span>" : "")
+	            : e + h + E),
+	          (a[B] =
+	            "&nbsp;" === y && ~i.indexOf("  ")
+	              ? i.split("  ").join("&nbsp;&nbsp;")
+	              : i);
+	      },
+	    };
+	  (f.emojiSafeSplit = emojiSafeSplit),
+	    (f.getText = getText),
+	    i() && e.registerPlugin(f),
+	    (D.ScrambleTextPlugin = f),
+	    (D.default = f);
+	  if (typeof window === "undefined" || window !== D) {
+	    Object.defineProperty(D, "__esModule", { value: !0 });
+	  } else {
+	    delete D.default;
+	  }
+	});
+} (ScrambleTextPlugin3_min, ScrambleTextPlugin3_minExports));
+
+var ScrambleTextPlugin = /*@__PURE__*/getDefaultExportFromCjs(ScrambleTextPlugin3_minExports);
+
+function fomatterNum(num) {
+    if (typeof num === 'number') {
+      return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+    } else {
+      return ''
+    }
+  }
+
+gsapWithCSS.registerPlugin(ScrambleTextPlugin);
 /**
  * 封装gsap
  */
@@ -6524,31 +7013,21 @@ var GrowTimeLine = /** @class */ (function (_super) {
  * 进出场动画控制器
  */
 var HTMLGrowAnimateController = /** @class */ (function () {
-    function HTMLGrowAnimateController(elements) {
+    function HTMLGrowAnimateController(elements, opt) {
+        this._option = opt;
         this._els = elements;
-        this._index = 0;
         //注册通用动画    
         this._registerEffects();
         //构建动画线      
-        this._tl = new GrowTimeLine();
+        this._tl = new GrowTimeLine({
+            paused: true
+        });
         //为所有元素初始化动画任务
         this._init();
     }
     HTMLGrowAnimateController.prototype._init = function () {
         this._tl.addLabel('start');
         this._tl.add(this._getTl(this._els));
-        //规划动画线
-        this._els.forEach(function (element) {
-            // if(element.type!=EGrowElementType.none)
-            // this._tl.to(element.el,{duration: .5,background:'#88ff88',opacity: 1},'>-.2')
-            // gsap.to(element.el,{duration: .5,background:'#88ff88',opacity: 1,delay:element.index*.2})
-            // let vars=this._getElementAnimate(element).vars
-            // this._tl.to(element.el,{duration: .3,background:'#88ff88',opacity: 1},"start+="+(element.index*.1))
-            // this._setElementAnimate(element)
-            // this._tl.to(element.el,{duration: 1, background:'blue',opacity: 1}, '>-0.5')
-            // this._tl.to(element.el, {...vars, delay:element.index*0.5})
-            // this._tl.to(element.el, vars, '>-.2')
-        });
     };
     /**
      * 获取动画线
@@ -6561,9 +7040,7 @@ var HTMLGrowAnimateController = /** @class */ (function () {
         for (var i = 0; i < els.length; i++) {
             var childTl = new GrowTimeLine();
             childTl.addLabel('start');
-            /**----------------------------------------------判断els[i]类型增加元素动画-开始---------------------------- */
-            parentTl.add(this._setElementAnimate(els[i]), 'start+=0');
-            /**----------------------------------------------判断els[i]类型增加元素动画-结束---------------------------- */
+            parentTl.add(this._setElementAnimate(els[i]), 'start+=' + els[i].startTime);
             if (els[i].children.length) {
                 childTl = this._getTlRecurve(els[i].children);
             }
@@ -6584,13 +7061,13 @@ var HTMLGrowAnimateController = /** @class */ (function () {
             childTl.addLabel('start');
             for (var j = 0; j < els[i].length; j++) {
                 var tl = new GrowTimeLine();
-                /**----------------------------------------------判断els[i][j]类型增加元素动画-开始---------------------------- */
-                tl.add(this._setElementAnimate(els[i][j]));
-                /**----------------------------------------------判断els[i][j]类型增加元素动画-结束---------------------------- */
-                // tl.add(gsap.fromTo(els[i][j].el,{opacity: 0, scale: 0}, {opacity: 1, scale: 1, transformOrigin: 'top center', duration: els[i][j].duration}))
+                tl.add(this._setElementAnimate(els[i][j]), 'start+=' + els[i][j].startTime);
+                if (els[i][j].children.length) {
+                    tl.add(this._getTlRecurve(els[i][j].children));
+                }
                 childTl.add(tl, 'start+=' + els[i][j].startTime);
             }
-            parentTl.add(childTl, 0);
+            parentTl.add(childTl, 'start');
         }
         return parentTl;
     };
@@ -6610,19 +7087,19 @@ var HTMLGrowAnimateController = /** @class */ (function () {
     HTMLGrowAnimateController.prototype.stop = function () {
         this._tl.pause();
     };
-    //为元素设置动画并添加到动画线
+    //为元素设置动画
     HTMLGrowAnimateController.prototype._setElementAnimate = function (element) {
-        var gt;
+        var gt, duration;
         switch (element.type) {
             case EGrowElementType.chart:
                 // gt=new GrowTween(element.el,{duration: 1, background:'red',opacity: 1})
                 gt = gsapWithCSS.effects.chart(element.el, { duration: element.duration });
                 break;
             case EGrowElementType.bg:
-                gt = gsapWithCSS.effects.bg(element.el, { duration: element.duration });
+                gt = gsapWithCSS.effects.bg(element.el, { duration: element.duration, originalStyle: element.originalStyle });
                 break;
             case EGrowElementType.image:
-                gt = gsapWithCSS.effects.image(element.el, { duration: element.duration });
+                gt = gsapWithCSS.effects.bg(element.el, { duration: element.duration, originalStyle: element.originalStyle });
                 break;
             case EGrowElementType.svg:
                 gt = gsapWithCSS.effects.svg(element.el, { duration: element.duration });
@@ -6631,33 +7108,66 @@ var HTMLGrowAnimateController = /** @class */ (function () {
                 gt = gsapWithCSS.effects.video(element.el, { duration: element.duration });
                 break;
             case EGrowElementType.string:
-                gt = new GrowTween(element.el, { duration: 1, color: '#ff9933', opacity: 1 });
+                var type = void 0;
+                duration = Math.max(element.duration, this._option.stringDurationThreshold);
+                switch (this._option.stringType) {
+                    case StringGrowType.wave:
+                        type = "stringWave";
+                        break;
+                    case StringGrowType.print:
+                        type = "stringPrint";
+                        break;
+                    default:
+                        type = "stringPrint";
+                        break;
+                }
+                gt = gsapWithCSS.effects[type](element.el, { duration: duration });
+                break;
+            case EGrowElementType.number:
+                duration = Math.max(element.duration, this._option.numberDurationThreshold);
+                gt = gsapWithCSS.effects.number(element.el, { duration: duration, value: element.el.innerHTML });
+                break;
+            case EGrowElementType.bgNumber:
+                duration = Math.max(element.duration, this._option.numberDurationThreshold);
+                gt = gsapWithCSS.effects.bgNumber(element.el, { duration: duration, value: element.el.innerHTML });
+                break;
+            case EGrowElementType.bgString:
+                duration = Math.max(element.duration, this._option.stringDurationThreshold);
+                gt = gsapWithCSS.effects.bgString(element.el, { duration: duration, value: element.el.innerHTML });
                 break;
             case EGrowElementType.none:
-                gt = new GrowTween(element.el, { duration: 0, opacity: 1 });
+                gt = new GrowTween(element.el, { duration: 0 });
                 break;
             default: //none
-                gt = new GrowTween(element.el, { duration: 0, opacity: 1 });
+                gt = new GrowTween(element.el, { duration: 0 });
                 break;
         }
-        element.grow = gt;
+        if (element.grow) {
+            // 判断当前元素是否有grow，若有则使用元素自带的grow
+            gt = element.grow;
+        }
+        else {
+            element.grow = gt;
+        }
         return gt;
     };
     //注册动画类型
     HTMLGrowAnimateController.prototype._registerEffects = function () {
+        var _this = this;
         //后期配置文件读入，提高可配性
         //chart
         gsapWithCSS.registerEffect({
             name: 'chart',
             effect: function (targets, config) {
-                return gsapWithCSS.to(targets, { duration: config.duration, opacity: 1 });
+                return gsapWithCSS.fromTo(targets, { opacity: 0 }, { opacity: 1, duration: config.duration });
             },
         });
         //背景
         gsapWithCSS.registerEffect({
             name: 'bg',
             effect: function (targets, config) {
-                return gsapWithCSS.fromTo(targets, { opacity: 0, scale: 0 }, { scale: 1, transformOrigin: 'top center', duration: config.duration, opacity: 1 });
+                // return gsap.fromTo(targets, {opacity: 0, scale: 0}, {opacity: config.originalStyle.opacity, scaleX: config.originalStyle.scaleX, scaleY: config.originalStyle.scaleY, transformOrigin: this._getTransformOrigin(), duration: config.duration});
+                return gsapWithCSS.fromTo(targets, { opacity: 0, scale: 0 }, { opacity: config.originalStyle.opacity || 1, scaleX: config.originalStyle.scaleX, scaleY: config.originalStyle.scaleY, transformOrigin: _this._getTransformOrigin(), duration: config.duration });
             },
         });
         //svg
@@ -6671,7 +7181,7 @@ var HTMLGrowAnimateController = /** @class */ (function () {
         gsapWithCSS.registerEffect({
             name: 'image',
             effect: function (targets, config) {
-                return gsapWithCSS.to(targets, { duration: config.duration, opacity: 1 });
+                return gsapWithCSS.from(targets, { opacity: 0, scale: 0, transformOrigin: _this._getTransformOrigin(), duration: config.duration });
             },
         });
         //video
@@ -6681,21 +7191,147 @@ var HTMLGrowAnimateController = /** @class */ (function () {
                 return gsapWithCSS.to(targets, { duration: config.duration, opacity: 1 });
             },
         });
+        //数字
+        gsapWithCSS.registerEffect({
+            name: 'number',
+            effect: function (targets, config) {
+                var decimals = 0;
+                if (String(config.value).indexOf(".") > -1) {
+                    decimals = String(config.value).split(".")[1].length;
+                }
+                var count = { val: 0 }, hasThousander = config.value.indexOf(",") > -1 ? true : false, actualValue = 0;
+                //判断是否有千分符
+                if (hasThousander) {
+                    actualValue = Number(config.value.replace(",", ""));
+                }
+                else {
+                    actualValue = config.value;
+                }
+                return gsapWithCSS.to(targets, { opacity: 1, duration: 0.1, onComplete: function () {
+                        gsapWithCSS.to(count, { duration: config.duration, val: actualValue, onUpdate: function () {
+                                if (hasThousander) {
+                                    targets[0].innerHTML = fomatterNum(Number(count.val.toFixed(decimals)));
+                                }
+                                else {
+                                    targets[0].innerHTML = count.val.toFixed(decimals);
+                                }
+                            } });
+                    } });
+            },
+        });
+        //stringWave
+        gsapWithCSS.registerEffect({
+            name: 'stringWave',
+            effect: function (targets, config) {
+                var mySplitText = new SplitText(targets, { type: "chars" });
+                var chars = mySplitText.chars;
+                gsapWithCSS.set(targets, { perspective: 400, opacity: 1 });
+                return gsapWithCSS.from(chars, { duration: config.duration, opacity: 0, scale: 0, y: 80, rotationX: 100, transformOrigin: "0% 50% -50", ease: "back", stagger: 0.03 });
+            },
+        });
+        //stringPrint
+        gsapWithCSS.registerEffect({
+            name: 'stringPrint',
+            effect: function (targets, config) {
+                var opt = {
+                    text: targets[0].innerHTML,
+                    chars: "_",
+                    speed: 0.3,
+                    ease: "none"
+                };
+                return gsapWithCSS.to(targets, { duration: config.duration, opacity: 1, scrambleText: __assign({}, opt) });
+            },
+        });
+        //bgString动画方式：清空动画元素内容->背景动画->背景动画完成设置元素内容->内容动画 
+        // 注意： 未测试onComplete里动画时间是否体现在整体动画时间上
+        gsapWithCSS.registerEffect({
+            name: 'bgString',
+            effect: function (targets, config) {
+                var text = targets[0].innerHTML;
+                targets[0].innerHTML = "";
+                return gsapWithCSS.fromTo(targets, { opacity: 0 }, { duration: _this._option.bgDurationThreshold, opacity: 1, onComplete: function () {
+                        targets[0].innerHTML = text;
+                        var mySplitText = new SplitText(targets, { type: "chars" });
+                        var chars = mySplitText.chars;
+                        gsapWithCSS.set(targets, { perspective: 400 });
+                        gsapWithCSS.from(chars, { duration: config.duration, opacity: 0, scale: 0, y: 80, rotationX: 100, transformOrigin: '0 50% -50', ease: "back", stagger: 0.01 });
+                    } });
+            },
+        });
+        //bgNumber
+        gsapWithCSS.registerEffect({
+            name: 'bgNumber',
+            effect: function (targets, config) {
+                var decimals;
+                if (String(config.value).indexOf(".") > -1) {
+                    decimals = String(config.value).split(".")[1].length;
+                }
+                var hasThousander = config.value.indexOf(",") > -1 ? true : false, actualValue = 0;
+                targets[0].innerHTML = "";
+                //判断是否有千分符
+                if (hasThousander) {
+                    actualValue = Number(config.value.replace(",", ""));
+                }
+                else {
+                    actualValue = config.value;
+                }
+                return gsapWithCSS.fromTo(targets, { opacity: 0 }, { duration: _this._option.bgDurationThreshold, opacity: 1, onComplete: function () {
+                        var count = { val: 0 };
+                        gsapWithCSS.to(count, { duration: config.duration, val: actualValue, onUpdate: function () {
+                                if (hasThousander) {
+                                    targets[0].innerHTML = fomatterNum(Number(count.val.toFixed(decimals)));
+                                }
+                                else {
+                                    targets[0].innerHTML = count.val.toFixed(decimals);
+                                }
+                            } });
+                    } });
+            },
+        });
+    };
+    // 根据传入的动画类型获取背景图片动画
+    HTMLGrowAnimateController.prototype._getTransformOrigin = function () {
+        var transformOrigin;
+        switch (this._option.growType) {
+            case exports.EGrowType.LeftToRight:
+                transformOrigin = 'left center';
+                break;
+            case exports.EGrowType.TopToBottom:
+                transformOrigin = 'top center';
+                break;
+            default:
+                transformOrigin = 'top center';
+                break;
+        }
+        return transformOrigin;
     };
     return HTMLGrowAnimateController;
 }());
 
 var PageGrow = /** @class */ (function () {
     function PageGrow(opt) {
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j;
+        // 设置默认参数
+        this.option = {
+            target: (_a = opt.target) !== null && _a !== void 0 ? _a : document.body,
+            growType: (_b = opt.growType) !== null && _b !== void 0 ? _b : 3,
+            duration: (_c = opt.duration) !== null && _c !== void 0 ? _c : 3,
+            stringType: (_d = opt.stringType) !== null && _d !== void 0 ? _d : 1,
+            stringDurationThreshold: (_e = opt.stringDurationThreshold) !== null && _e !== void 0 ? _e : 1,
+            numberType: (_f = opt.numberType) !== null && _f !== void 0 ? _f : 1,
+            numberDurationThreshold: (_g = opt.numberDurationThreshold) !== null && _g !== void 0 ? _g : 1,
+            bgType: (_h = opt.stringType) !== null && _h !== void 0 ? _h : 1,
+            bgDurationThreshold: (_j = opt.bgDurationThreshold) !== null && _j !== void 0 ? _j : 1,
+        };
         //配置解析规则
         // const rule:IParserRule = RuleFactory.create({growType:<EGrowType>Number(opt.growType)})
-        var rule = RuleFactory.create(opt);
+        var rule = RuleFactory.create(this.option);
         //构建解析器
         var parser = new HTMLPageParser(rule);
         //开始解析
-        var els = parser.parse(opt);
+        var els = parser.parse(this.option);
         //对象列表按类型预定动画方案
-        this._animateController = new HTMLGrowAnimateController(els);
+        this._animateController = new HTMLGrowAnimateController(els, this.option);
     }
     PageGrow.prototype.enter = function () {
         //执行进场

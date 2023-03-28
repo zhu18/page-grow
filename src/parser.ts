@@ -51,16 +51,11 @@ export class HTMLPageParser extends AbstractParser{
      * @returns IGrowHTMLElement数组
      */
     public parse(opt:PageGrowOption): Array<IGrowHTMLElement> {
-        this._duration = opt.duration??3
+        this._duration = opt.duration
         //初始化所有元素基础信息
-        this._els = this._parseHTMLElementNew(opt.target??document.body)
+        this._els = this._parseHTMLElementNew(opt.target)
         //通过规则重新排序
         this._rule.exec(this._els)        
-        //重置索引
-        // this._els.forEach((el,i)=>{
-        //     el.index=i
-        // })
-        
         return this._els
     }
 
@@ -120,7 +115,9 @@ export class HTMLPageParser extends AbstractParser{
             element_centerY = element_y + element.offsetHeight / 2,
             element_info = [];
         let el = this._getElement(element, element_x, element_y, element_centerX, element_centerY)
-            el.children = this._parseHTMLElementRecurve(element)
+            if((el.type !== EGrowElementType.svg) && (el.type !== EGrowElementType.chart)){ // 当元素类型为svg/chart时，不遍历子元素
+                el.children = this._parseHTMLElementRecurve(element)
+            }
             el.duration = this._duration
             element_info.push(el)
         return element_info
@@ -146,10 +143,7 @@ export class HTMLPageParser extends AbstractParser{
             if(element_child[i].nodeName == 'SCRIPT'){
                 break
             }
-            let child = []
-            if(element_child[i].children.length){
-                child = this._parseHTMLElementRecurve(element_child[i])
-            }
+            
             const x = element_child[i].getBoundingClientRect().left - element_x;
             const y = element_child[i].getBoundingClientRect().top - element_y;
             const w = element_child[i].offsetWidth??element_child[i].scrollWidth;
@@ -157,6 +151,10 @@ export class HTMLPageParser extends AbstractParser{
             const centerX = x + w / 2;
             const centerY = y + h /2;
             let el = this._getElement(element_child[i], x, y, centerX, centerY)
+            let child = []
+            if(element_child[i].children.length && (el.type !== EGrowElementType.svg) && (el.type !== EGrowElementType.chart)){// 当元素类型为svg/chart时，不遍历子元素
+                child = this._parseHTMLElementRecurve(element_child[i])
+            }
             el.children = child
             element_info.push(el)
             
@@ -174,15 +172,36 @@ export class HTMLPageParser extends AbstractParser{
      * @returns 
      */
     private _getElement(el: HTMLElement|any, x: number, y: number, centerX: number,  centerY: number): IGrowHTMLElement{
-        let w = el.offsetWidth, h = el.offsetHeight;
-        // if(!(w && h)){
-        //     el.style.position = 'relative'
-        // }
-        // w = el.scrollWidth
-        // h = el.scrollHeight
-        // if(el.id == 'view'){
-        //     console.log(h)
-        // }
+
+        // 当元素宽/高未设置为0时， 设置为相对定位，获取宽/高
+        let w = Number(window.getComputedStyle(el).width.replace("px", "")) || el.offsetWidth, h = Number(window.getComputedStyle(el).height.replace("px", "")) || el.offsetHeight;
+        if(!(w && h)){
+            el.style.position = 'relative'
+            w = el.scrollWidth
+            h = el.scrollHeight
+        }
+     
+        // 获取元素transform原始数值，因为动画是基于opacity、scale属性设置
+        let transformStr = window.getComputedStyle(el).transform
+        let transformArr:Array<string> = [], scaleX:number = 1, scaleY:number = 1
+        if(transformStr != 'none'){
+            if(transformStr.indexOf("matrix")>-1){
+                transformArr = transformStr.substring(7).replace(")", "").split(",")
+                scaleX = Number(transformArr[0])??1
+                scaleY = Number(transformArr[3])??1
+            }
+            if(transformStr.indexOf("scale")>-1){
+                transformArr = transformStr.substring(6).replace(")", "").split(",")
+                if(transformArr.length>1){
+                    scaleX = Number(transformArr[0])??1
+                    scaleY = Number(transformArr[3])??1
+                }else{
+                    scaleX = Number(transformArr[0])??1
+                    scaleY = Number(transformArr[0])??1
+                }
+                
+            }
+        }
         return {
             el: el,
             tagName: el.tagName,
@@ -192,13 +211,20 @@ export class HTMLPageParser extends AbstractParser{
             h,
             centerX,
             centerY,
-            type: this._getType(el),
             index: 0,
             distance:  Math.sqrt(Math.pow(centerX - window.innerWidth / 2, 2) + Math.pow(centerY - window.innerHeight / 2, 2)),
             children: [],
             startTime: 0,
             endTime: 0,
-            duration: 0
+            duration: 0,
+            originalStyle: {
+                opacity: Number(window.getComputedStyle(el).opacity)??1,
+                scaleX,
+                scaleY,
+                transformOrigin: window.getComputedStyle(el).transformOrigin
+            },
+            type: this._getType(el),
+            grow: el.grow
         }
     }
     /**
@@ -213,17 +239,20 @@ export class HTMLPageParser extends AbstractParser{
             case "IMG":
                 etype = EGrowElementType.image
                 break;
-            case "svg":
+            case "SVG":
                 etype = EGrowElementType.svg
                 break;
-            case "video":
+            case "VIDEO":
                 etype = EGrowElementType.video
                 break;
-            case "audio":
+            case "AUDIO":
                 etype = EGrowElementType.audio
                 break;
-            case "canvas":
+            case "CANVAS":
                 etype = EGrowElementType.canvas
+                break;
+            case "STYLE":
+                etype = EGrowElementType.style
                 break;
         }
         let hasBg = window.getComputedStyle(el).backgroundColor != 'rgba(0, 0, 0, 0)' || window.getComputedStyle(el).backgroundImage != 'none'
@@ -236,14 +265,31 @@ export class HTMLPageParser extends AbstractParser{
             etype = EGrowElementType.chart
         }
         //文本/数字
-        if(el.nodeType === 1 && el.children.length === 0 && el.innerText){
-            if(isNaN(Number(el.innerText))){
-                //字符串
-                etype = EGrowElementType.string
+        if(el.nodeType === 1 && el.children.length === 0 && el.innerText && (etype !== EGrowElementType.style)){
+            let text = el.innerText, isNum = isNaN(Number(text.replace(",", "")))
+            if(isNum){
+                if(hasBg){
+                    //字符串+背景
+                    etype = EGrowElementType.bgString
+                }else {
+                    //字符串
+                    etype = EGrowElementType.string
+                }
+                
             }else {
-                //数字
-                etype = EGrowElementType.number
+                if(hasBg){
+                    //数字+背景
+                    etype = EGrowElementType.bgNumber
+                }else {
+                    //数字
+                    etype = EGrowElementType.number
+                }
+                
             }
+        }
+
+        if(etype != EGrowElementType.none && (etype !== EGrowElementType.style)){
+            el.style.opacity = 0
         }
         return etype
     }

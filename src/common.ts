@@ -13,8 +13,16 @@ export  enum EGrowElementType{
     bg,
     audio,
     video,
-    canvas
+    canvas,
+    bgString,
+    bgNumber,
+    style
     //...
+}
+
+export enum StringGrowType{
+    wave=1,
+    print=2
 }
 
 /**
@@ -48,6 +56,10 @@ export declare interface IGrowElement{
      * 动画对象
      */
     grow?:object,
+    /**
+     * 元素原始样式()目前包含opacity, scaleX, scaleY
+     */
+    originalStyle?:object
     
 }
 

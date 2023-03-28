@@ -2,6 +2,27 @@ import { EGrowElementType, IGrowElement,IGrowHTMLElement} from './common'
 import {PageGrowOption} from './engine'
 
 /**
+ * 解析规则配置
+ */
+ export interface RuleOption{
+    growType:EGrowType; //动画进场方式
+    
+}
+
+/**
+ * 进场动画方式
+ */
+export enum EGrowType{
+    LeftToRight=1,
+    RightToLeft=2,
+    TopToBottom=3,
+    BottomToTop=4,
+    LeftTopToRightBottom=5,
+    CenterToAround=6
+    // 待扩展..
+}
+
+/**
  * 解析规则接口
  */
 export declare interface IParserRule{   
@@ -87,25 +108,7 @@ export class RuleFactory{
     }
 }
 
-/**
- * 解析规则配置
- */
-export interface RuleOption{
-    growType:EGrowType; //动画进场方式
-}
 
-/**
- * 进场动画方式
- */
-export enum EGrowType{
-    LeftToRight=1,
-    RightToLeft=2,
-    TopToBottom=3,
-    BottomToTop=4,
-    LeftTopToRightBottom=5,
-    CenterToAround=6
-    // 待扩展..
-}
 
 
 /**

@@ -3,6 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <style>
+        p, ul, li {margin: 0;padding: 0;list-style: none;}
+        span{display: inline-block;}
         .container{
             position:relative;
             width: 700px;
@@ -16,22 +18,57 @@
             margin-bottom: 20px;
         }
         .box1 {width: 200px;}
-        .box2 {width: 700px;}
+        .box2 {width: 700px;height: 150px;}
         .box3 {width: 300px;}
         .box4 {width: 300px;}
         .box7 {position: absolute;right: -230px;top: 0;width: 200px;height: 340px;}
+        .text {margin: 0;font-size: 12px;}
+        .red-bg {margin: 10px;height: 60px;background: #eb9999;}
+        .wrapper-bg {margin: 10px;height: 120px;background: #999393;}
     </style>
   </head>
   <body>
         <div class="container" id="container">
-            <div class="box box1" id="box1">nohoifofofs</div>
-            <div class="box box1" id="box2"></div>
-            <div class="box box1" id="box3"></div>
+            <div class="box box1" id="box1">
+                <span>2500个</span>
+                <p class="text"> ANOV-DEV是一个基于Vue开发的轻量级数据可视化框架，主要特性为场景酷炫超震撼，高效易用低门槛，智能交互高感知，开放自由可扩展，生态丰富更多元。 </p>
+            </div>
+            <div class="box box1" id="box2"><p id="num">5,000</p></div>
+            <div class="box box1" id="box3">
+                <div class="red-bg"></div>
+            </div>
             <div class="box box7" id="box7"></div>
 
-            <div class="box box2" id="box4"></div>
-            <div class="box box3" id="box5"></div>
-            <div class="box box4" id="box6"></div>
+            <div class="box box2" id="box4">
+                <div class="wrapper-bg">
+                    <p class="wrapper-title">模块标题测试模块标题测试模块标题测试模块标题测试模块标题测试</p>
+                    <ul>
+                        <li>
+                            <span>1</span>
+                            <span>配置解析规则</span>
+                        </li>
+                        <li>
+                            <span>2</span>
+                            <span>构建解析器</span>
+                        </li>
+                        <li>
+                            <span>3</span>
+                            <span>开始解析</span>
+                        </li>
+                        <li>
+                            <span>4</span>
+                            <span>执行动画</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="box box3" id="box5">25,000</div>
+            <div class="box box4" id="box6">
+                <img src="./img1.jpg"/>
+                <img src="./img2.jpg"/>
+                <img src="./img3.jpg"/>
+                <img src="./img4.jpg"/>
+            </div>
         </div>
         
     <!-- <script  type="module" src="../index.esm.js"></script> -->
@@ -40,6 +77,7 @@
         setTimeout(() => {
             let pageGrow = new PageGrow({target: document.getElementById("container"), growType: 3, duration: 2})
             console.log(pageGrow)
+            window.pageGrow = pageGrow
         }, 3000)
         
     </script>

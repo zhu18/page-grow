@@ -17,7 +17,7 @@ export default {
 			nodeResolve({
 				mainFields: ['module', 'main'],
 			}),
-			// commonjs(),
+			commonjs(),
 			// eslint({
 			//   throwOnError: true,
 			//   throwOnWarning: true,

@@ -12,7 +12,14 @@ export declare enum EGrowElementType {
     bg = 6,
     audio = 7,
     video = 8,
-    canvas = 9
+    canvas = 9,
+    bgString = 10,
+    bgNumber = 11,
+    style = 12
+}
+export declare enum StringGrowType {
+    wave = 1,
+    print = 2
 }
 /**
  * 动画对象接口
@@ -45,6 +52,10 @@ export declare interface IGrowElement {
      * 动画对象
      */
     grow?: object;
+    /**
+     * 元素原始样式()目前包含opacity, scaleX, scaleY
+     */
+    originalStyle?: object;
 }
 /**
  * HTML动画对象接口
