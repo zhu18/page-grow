@@ -1,12 +1,6 @@
 import { IGrowElement, IGrowHTMLElement } from './common';
 import { PageGrowOption } from './engine';
 /**
- * 解析规则配置
- */
-export interface RuleOption {
-    growType: EGrowType;
-}
-/**
  * 进场动画方式
  */
 export declare enum EGrowType {
@@ -16,6 +10,12 @@ export declare enum EGrowType {
     BottomToTop = 4,
     LeftTopToRightBottom = 5,
     CenterToAround = 6
+}
+/**
+ * 解析规则工厂，通过参数配置生成解析规则
+ */
+export declare class RuleFactory {
+    static create(opt: PageGrowOption): IParserRule;
 }
 /**
  * 解析规则接口
@@ -46,10 +46,4 @@ export declare class LeftToRightParserRule implements IParserRule {
  */
 export declare class CenterToAroundParserRule implements IParserRule {
     exec(elements: Array<IGrowHTMLElement>): void;
-}
-/**
- * 解析规则工厂，通过参数配置生成解析规则
- */
-export declare class RuleFactory {
-    static create(opt: PageGrowOption): IParserRule;
 }

@@ -10,12 +10,26 @@ export declare enum EGrowElementType {
     none = 4,
     svg = 5,
     bg = 6,
-    audio = 7,
-    video = 8,
-    canvas = 9,
-    bgString = 10,
-    bgNumber = 11,
-    style = 12
+    video = 7,
+    canvas = 8,
+    bgString = 9,
+    bgNumber = 10,
+    style = 11,
+    leafNode = 12
+}
+export declare enum EGrowElementTime {
+    number = 0.3,
+    string = 0.3,
+    image = 0.3,
+    chart = 0.2,
+    none = 0,
+    svg = 0.3,
+    bg = 0.3,
+    audio = 0.3,
+    video = 0.3,
+    canvas = 0.2,
+    bgString = 0.3,
+    bgNumber = 0.3
 }
 export declare enum StringGrowType {
     wave = 1,
@@ -32,6 +46,7 @@ export declare interface IGrowElement {
     centerX: number;
     centerY: number;
     distance: number;
+    cornerDistance: number;
     /**
      * 原始对象
      */

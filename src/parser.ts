@@ -31,7 +31,8 @@ export class HTMLPageParser extends AbstractParser{
 
     private _rule:IParserRule
     private _els:IGrowHTMLElement[]=Array<IGrowHTMLElement>()
-    private _duration:number = 3
+    private _option!: PageGrowOption
+    private _parseLayer!: number
 
     public get rule():IParserRule{
         return this._rule
@@ -51,55 +52,13 @@ export class HTMLPageParser extends AbstractParser{
      * @returns IGrowHTMLElement数组
      */
     public parse(opt:PageGrowOption): Array<IGrowHTMLElement> {
-        this._duration = opt.duration
+        this._option = opt
+        this._parseLayer = 0
         //初始化所有元素基础信息
         this._els = this._parseHTMLElementNew(opt.target)
         //通过规则重新排序
         this._rule.exec(this._els)        
         return this._els
-    }
-
-
-    /**
-     * 递归解析元素的位置与大小
-     * @param element 被解析的HTML元素
-     * @param x x位置
-     * @param y y位置
-     */
-    private _parseHTMLElement(element:HTMLElement|any, x = 0, y = 0): void {
-        x += element.offsetLeft - (element.offsetParent?.clientLeft??0);
-        y += element.offsetTop - (element.offsetParent?.clientTop??0);
-        const h = element.offsetHeight
-        const w = element.offsetWidth
-        let centerX = x + element.offsetWidth / 2;
-        let centerY = y + element.offsetHeight / 2;
-        // if (element instanceof HTMLElement) {  对iframe内嵌页面 判断未知，初步估计v8引擎bug, iframe中的DOM元素，并且不能将其视为主文档HTMLElement类型的对象
-        if(element.nodeType===1){
-            // this._els.push({
-            //         el: element,
-            //         tagName:element.tagName,                   
-            //         x,
-            //         y,
-            //         w,
-            //         h,
-            //         centerX,
-            //         centerY,
-            //         distance: Math.sqrt(Math.pow(centerX - window.innerWidth / 2, 2) + Math.pow(centerY - window.innerHeight / 2, 2)),
-            //         type:this._getType(element),
-            //         //解析后重置
-            //         index: 0
-            //     }
-            // )
-        }
-        //}
-        for (let i = 0; i < element.childNodes.length; i++) {
-            let child = element.childNodes[i];
-            if(child.nodeType===1){
-           // if (child instanceof HTMLElement) {
-                this._parseHTMLElement(child, x + element.offsetLeft, y + element.offsetTop);
-          //}
-            }
-        }
     }
 
     /**
@@ -109,17 +68,18 @@ export class HTMLPageParser extends AbstractParser{
      */
 
     private _parseHTMLElementNew(element: HTMLElement|any): Array<IGrowHTMLElement> {
+        this._parseLayer++
         let element_x = element.getBoundingClientRect().left,
             element_y = element.getBoundingClientRect().top,
             element_centerX = element_x + element.offsetWidth / 2,
             element_centerY = element_y + element.offsetHeight / 2,
             element_info = [];
         let el = this._getElement(element, element_x, element_y, element_centerX, element_centerY)
-            if((el.type !== EGrowElementType.svg) && (el.type !== EGrowElementType.chart)){ // 当元素类型为svg/chart时，不遍历子元素
-                el.children = this._parseHTMLElementRecurve(element)
-            }
-            el.duration = this._duration
-            element_info.push(el)
+        let isParse = this._isParse(el)
+        if(isParse){
+            el.children = this._parseHTMLElementRecurve(element)
+        }
+        element_info.push(el)
         return element_info
     }
 
@@ -129,7 +89,7 @@ export class HTMLPageParser extends AbstractParser{
      * @returns 
      */
     private _parseHTMLElementRecurve(element: HTMLElement|any): Array<any> {
-        
+        this._parseLayer++
         let element_child = element.children,
             element_x = element.getBoundingClientRect().left,
             element_y = element.getBoundingClientRect().top,
@@ -151,8 +111,8 @@ export class HTMLPageParser extends AbstractParser{
             const centerX = x + w / 2;
             const centerY = y + h /2;
             let el = this._getElement(element_child[i], x, y, centerX, centerY)
-            let child = []
-            if(element_child[i].children.length && (el.type !== EGrowElementType.svg) && (el.type !== EGrowElementType.chart)){// 当元素类型为svg/chart时，不遍历子元素
+            let child = [], isParse = this._isParse(el)
+            if(element_child[i].children.length && isParse){
                 child = this._parseHTMLElementRecurve(element_child[i])
             }
             el.children = child
@@ -202,6 +162,9 @@ export class HTMLPageParser extends AbstractParser{
                 
             }
         }
+
+        
+
         return {
             el: el,
             tagName: el.tagName,
@@ -213,6 +176,7 @@ export class HTMLPageParser extends AbstractParser{
             centerY,
             index: 0,
             distance:  Math.sqrt(Math.pow(centerX - window.innerWidth / 2, 2) + Math.pow(centerY - window.innerHeight / 2, 2)),
+            cornerDistance:  Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2)),
             children: [],
             startTime: 0,
             endTime: 0,
@@ -221,7 +185,9 @@ export class HTMLPageParser extends AbstractParser{
                 opacity: Number(window.getComputedStyle(el).opacity)??1,
                 scaleX,
                 scaleY,
-                transformOrigin: window.getComputedStyle(el).transformOrigin
+                transformOrigin: window.getComputedStyle(el).transformOrigin,
+                width: window.getComputedStyle(el).width,
+                height: window.getComputedStyle(el).height
             },
             type: this._getType(el),
             grow: el.grow
@@ -245,9 +211,6 @@ export class HTMLPageParser extends AbstractParser{
             case "VIDEO":
                 etype = EGrowElementType.video
                 break;
-            case "AUDIO":
-                etype = EGrowElementType.audio
-                break;
             case "CANVAS":
                 etype = EGrowElementType.canvas
                 break;
@@ -255,7 +218,9 @@ export class HTMLPageParser extends AbstractParser{
                 etype = EGrowElementType.style
                 break;
         }
-        let hasBg = window.getComputedStyle(el).backgroundColor != 'rgba(0, 0, 0, 0)' || window.getComputedStyle(el).backgroundImage != 'none'
+        let hasBg = (window.getComputedStyle(el).backgroundColor != 'rgba(0, 0, 0, 0)' 
+            || window.getComputedStyle(el).backgroundImage != 'none' 
+            || window.getComputedStyle(el).borderImageSource != 'none')
         // 元素有背景图片/背景颜色
         if(hasBg){
             etype = EGrowElementType.bg
@@ -288,10 +253,50 @@ export class HTMLPageParser extends AbstractParser{
             }
         }
 
-        if(etype != EGrowElementType.none && (etype !== EGrowElementType.style)){
+
+        //判断是否为叶子节点
+        let isLeafNode = false
+        //如果anovSimpleMode=true，则判断el类名是否包含anov-part，若包含则设置该元素为叶子节点
+        if(this._option.anovSimpleMode){
+            let anovPartClassName = 'anov-part', classStr = el.className
+            if((typeof classStr == 'string') && (classStr.constructor == String) && el.className?.indexOf(anovPartClassName) > -1){
+                isLeafNode = true
+            }
+        }else {
+        //如果anovSimpleMode=false，则判断this._parseLayer和this._option.parseLayer是否相等，若相等该元素为叶子节点
+            if(this._option.parseLayer && (this._parseLayer === this._option.parseLayer)){
+                isLeafNode = true
+            }
+        }
+        if(isLeafNode){
+            etype = EGrowElementType.leafNode
+        }
+
+        if(this._option.anovSimpleMode && this._option.leafNodeType == 'sys_height' && isLeafNode){
+            el.className.add('leafNode')
+            el.style.height = 0
+            // el.style.overflow = 'hidden'
+        }else if(this._option.anovSimpleMode && this._option.leafNodeType == 'sys_width' && isLeafNode){
+            el.style.width = 0
+            el.style.overflow = 'hidden'
+        }else if(etype != EGrowElementType.none && (etype !== EGrowElementType.style) &&  (etype !== EGrowElementType.string)){
             el.style.opacity = 0
         }
+
         return etype
+    }
+
+    /**
+     * 判断是否遍历元素子元素
+     * @param el 
+     * @returns 
+     */
+    private _isParse(el:IGrowHTMLElement):boolean{
+        // 当元素类型为svg/chart/leafNode，不遍历子元素
+        if((el.type !== EGrowElementType.svg) && (el.type !== EGrowElementType.chart) && (el.type !== EGrowElementType.leafNode)){ 
+           return true
+        }
+        return false
     }
 }
 

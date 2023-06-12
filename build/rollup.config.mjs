@@ -37,6 +37,7 @@ export default {
 			// }),
 		],
 	//	external: ['axios','lodash.merge','dtc','gsap','hotkeys-js','howler','crypto-js','upng-js', 'xlsx', 'lodash-es'],
+		external: ['gsap'],
 		output: [
 			{
 				format: 'cjs',

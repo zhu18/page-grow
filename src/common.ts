@@ -11,15 +11,34 @@ export  enum EGrowElementType{
     none,
     svg,
     bg,
-    audio,
     video,
     canvas,
     bgString,
     bgNumber,
-    style
+    style,
+    leafNode
     //...
 }
 
+
+export  enum EGrowElementTime{
+    number=0.3,
+    string=0.3,    
+    image=0.3,
+    chart=0.2,
+    none=0,
+    svg=0.3,
+    bg=0.3,
+    audio=0.3,
+    video=0.3,
+    canvas=0.2,
+    bgString=0.3,
+    bgNumber=0.3
+    //...
+}
+
+
+// 字符串动画类型
 export enum StringGrowType{
     wave=1,
     print=2
@@ -35,7 +54,8 @@ export declare interface IGrowElement{
     h:number
     centerX:number
     centerY:number
-    distance:number
+    distance:number,
+    cornerDistance: number,
     /**
      * 原始对象
      */
@@ -51,7 +71,7 @@ export declare interface IGrowElement{
      /**
       * 动画时长
       */
-     duration: number
+     duration: number,
     /**
      * 动画对象
      */
@@ -87,7 +107,8 @@ export declare interface IGrowHTMLElement extends IGrowElement{
     /**
       * 动画时长
       */
-     duration: number
+     duration: number,
+    
      /**
      * 动画对象<覆盖基类>
      */

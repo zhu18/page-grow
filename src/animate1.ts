@@ -6,7 +6,7 @@ import SplitText from "./utils/SplitText.min";
 import ScrambleTextPlugin from './utils/ScrambleTextPlugin3.min'
 import {fomatterNum} from './utils/tool'
 
-
+gsap.registerPlugin(ScrambleTextPlugin)
 
 /**
  * 动画基础规则接口
@@ -51,12 +51,11 @@ export class HTMLGrowAnimateController implements IGrowAnimateController{
         //注册通用动画    
         this._registerEffects()
         //构建动画线      
-        this._tl=new GrowTimeLine()
-        // this._tl= gsap.timeline()
+        this._tl= gsap.timeline()
         
     }
     private _els:Array<IGrowHTMLElement>
-    private _tl:GrowTimeLine   
+    private _tl:gsap.core.Timeline   
     private _option:PageGrowOption
 
     private _init(){
@@ -69,11 +68,11 @@ export class HTMLGrowAnimateController implements IGrowAnimateController{
      * @param els 
      * @returns GrowTimeLine
      */
-    private _getTl(els: Array<IGrowHTMLElement>): GrowTimeLine{
-        let parentTl = new GrowTimeLine()
+    private _getTl(els: Array<IGrowHTMLElement>): gsap.core.Timeline{
+        let parentTl = gsap.timeline()
         parentTl.addLabel('start')
         for(let i = 0; i < els.length; i++){
-            let childTl = new GrowTimeLine()
+            let childTl = gsap.timeline()
             childTl.addLabel('start')
             //判断该元素是否有自定义动画线
             let customTl = this._elementHasCustomTl(els[i])
@@ -95,17 +94,17 @@ export class HTMLGrowAnimateController implements IGrowAnimateController{
      * @param els 
      * @returns GrowTimeLine
      */
-    private _getTlRecurve(els: Array<Array<IGrowHTMLElement>>): GrowTimeLine{
-        let parentTl = new GrowTimeLine()
+    private _getTlRecurve(els: Array<Array<IGrowHTMLElement>>): gsap.core.Timeline{
+        let parentTl = gsap.timeline()
         parentTl.addLabel('start')
         let totalMin = 0
         for(let i = 0; i < els.length; i++){
             let minDuration = 0
-            let childTl = new GrowTimeLine()
+            let childTl = gsap.timeline()
             childTl.addLabel('start')
             
             for(let j = 0; j < els[i].length; j++){
-                let tl = new GrowTimeLine()
+                let tl = gsap.timeline()
                 //判断该元素是否有自定义动画线
                 let customTl = this._elementHasCustomTl(els[i][j])
                 if(customTl.duration()){
@@ -126,7 +125,7 @@ export class HTMLGrowAnimateController implements IGrowAnimateController{
         }
         return parentTl
     }
-    public get timeLine(): GrowTimeLine{
+    public get timeLine(): gsap.core.Timeline{
         return this._tl
     }
     public get effects():Array<string>{
@@ -137,12 +136,12 @@ export class HTMLGrowAnimateController implements IGrowAnimateController{
     enter(): void {
         this._tl.play()
     }
-    creatTl(): GrowTimeLine{
-        gsap.registerPlugin(ScrambleTextPlugin)
+    creatTl(): gsap.core.Timeline{
         if(!this._tl.duration()){
             
              //为所有元素初始化动画任务
              let tl = this._init()
+             console.log(22,this._tl.constructor.prototype, this._tl instanceof gsap.core.Timeline)
              return tl
         }else return this._tl
     }
@@ -208,7 +207,7 @@ export class HTMLGrowAnimateController implements IGrowAnimateController{
                 gt=gsap.effects.sys_bgNumber(element.el, {duration: EGrowElementTime.bgNumber, value: element.el.innerHTML})
                 break;
             case EGrowElementType.bgString:
-                gt=gsap.effects.sys_opacity(element.el, {duration: EGrowElementTime.bgString, value: element.el.innerHTML})
+                gt=gsap.effects.sys_bgString(element.el, {duration: EGrowElementTime.bgString, value: element.el.innerHTML})
                 break;
             case EGrowElementType.leafNode:
                 // gt=gsap.effects[this._option.leafNodeType](element.el, {duration: EGrowElementTime.string})
@@ -294,26 +293,23 @@ export class HTMLGrowAnimateController implements IGrowAnimateController{
         gsap.registerEffect({
             name:'sys_stringWave',
             effect: (targets: HTMLElement|any, config: { duration: 1}) => {
-                let duration = targets[0].innerHTML.length / 200 * config.duration
                 let mySplitText  = new SplitText(targets, {type: "chars"})
                 let chars = mySplitText.chars
-                gsap.set(targets, {opacity:1,perspective: 400})
-                return gsap.from(chars, {duration: duration, opacity:0, scale:0, y:80, rotationX:100, transformOrigin:"0% 50% -50", ease:"back", stagger: 0.01});
+                gsap.set(targets, {perspective:400, opacity: 1})
+                return gsap.from(chars, {duration: config.duration, opacity:0, scale:0, y:80, rotationX:100, transformOrigin:"0% 50% -50", ease:"back", stagger: 0.03});
             },
         })
         //stringPrint
         gsap.registerEffect({
             name:'sys_stringPrint',
             effect: (targets: HTMLElement|any, config: { duration: 1}) => {
-                let duration = targets[0].innerHTML.length / 50 * config.duration
                 let opt = {
                     text: targets[0].innerHTML,
-                    chars: " ",
-                    speed: 0.2,
+                    chars: "_",
+                    speed: 0.3,
                     ease: "none"
                 }
-                // gsap.set(targets, { opacity: 1})
-                return gsap.to(targets, {duration: duration, scrambleText: {...opt}})
+                return gsap.to(targets, {duration: config.duration, opacity: 1, scrambleText: {...opt}})
             },
         })
         //bgString动画方式：清空动画元素内容->背景动画->背景动画完成设置元素内容->内容动画 
@@ -323,7 +319,7 @@ export class HTMLGrowAnimateController implements IGrowAnimateController{
             effect: (targets: HTMLElement|any, config: { duration: 1}) => {
                 let text = targets[0].innerHTML
                 targets[0].innerHTML = ""
-                return gsap.fromTo(targets, {opacity: 0}, {opacity: 1, duration: config.duration, onComplete: ()=>{
+                return gsap.fromTo(targets, {opacity: 0}, {duration: config.duration, opacity: 1, onComplete: ()=>{
                     targets[0].innerHTML = text
                     let mySplitText  = new SplitText(targets, {type: "chars"})
                     let chars = mySplitText.chars

@@ -48,10 +48,10 @@ export declare class HTMLGrowAnimateController implements IGrowAnimateController
      * @returns GrowTimeLine
      */
     private _getTlRecurve;
-    get timeLine(): GrowTimeLine;
+    get timeLine(): gsap.core.Timeline;
     get effects(): Array<string>;
     enter(): void;
-    creatTl(): GrowTimeLine;
+    creatTl(): gsap.core.Timeline;
     leave(): void;
     stop(): void;
     addEffect(effectList: Array<EffectObj>): void;

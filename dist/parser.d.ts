@@ -22,7 +22,8 @@ export declare class HTMLPageParser extends AbstractParser {
     constructor(rule: IParserRule);
     private _rule;
     private _els;
-    private _duration;
+    private _option;
+    private _parseLayer;
     get rule(): IParserRule;
     get elements(): IGrowHTMLElement[];
     dispose(): void;
@@ -32,13 +33,6 @@ export declare class HTMLPageParser extends AbstractParser {
      * @returns IGrowHTMLElement数组
      */
     parse(opt: PageGrowOption): Array<IGrowHTMLElement>;
-    /**
-     * 递归解析元素的位置与大小
-     * @param element 被解析的HTML元素
-     * @param x x位置
-     * @param y y位置
-     */
-    private _parseHTMLElement;
     /**
      * 获取元素集合
      * @param element 传入的动画元素
@@ -67,4 +61,10 @@ export declare class HTMLPageParser extends AbstractParser {
      * @returns 动画类型
      */
     private _getType;
+    /**
+     * 判断是否遍历元素子元素
+     * @param el
+     * @returns
+     */
+    private _isParse;
 }
