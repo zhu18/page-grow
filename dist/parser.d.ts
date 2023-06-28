@@ -24,6 +24,7 @@ export declare class HTMLPageParser extends AbstractParser {
     private _els;
     private _option;
     private _parseLayer;
+    private _hasMatchEle;
     get rule(): IParserRule;
     get elements(): IGrowHTMLElement[];
     dispose(): void;
@@ -38,7 +39,7 @@ export declare class HTMLPageParser extends AbstractParser {
      * @param element 传入的动画元素
      * @returns
      */
-    private _parseHTMLElementNew;
+    private _parseHTMLElement;
     /**
      * 递归获取元素集合
      * @param element 传入的动画元素
@@ -67,4 +68,8 @@ export declare class HTMLPageParser extends AbstractParser {
      * @returns
      */
     private _isParse;
+    private getPartElement;
+    private _parsePartsConfig;
+    private _getCompTl;
+    private initElStyle;
 }

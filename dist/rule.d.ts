@@ -5,10 +5,10 @@ import { PageGrowOption } from './engine';
  */
 export declare enum EGrowType {
     LeftToRight = 1,
-    RightToLeft = 2,
-    TopToBottom = 3,
-    BottomToTop = 4,
-    LeftTopToRightBottom = 5,
+    TopToBottom = 2,
+    LeftTopToRightBottom = 3,
+    RightToLeft = 4,
+    BottomToTop = 5,
     CenterToAround = 6
 }
 /**

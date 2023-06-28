@@ -1,4 +1,4 @@
-import { GrowTween } from "./animate"
+import { GrowTween, GrowTimeLine } from "./animate"
 
 /**
  * 动画对象类型
@@ -16,7 +16,7 @@ export  enum EGrowElementType{
     bgString,
     bgNumber,
     style,
-    leafNode
+    leafNode,
     //...
 }
 
@@ -24,13 +24,13 @@ export  enum EGrowElementType{
 export  enum EGrowElementTime{
     number=0.3,
     string=0.3,    
-    image=0.3,
+    image=0.2,
     chart=0.2,
     none=0,
-    svg=0.3,
-    bg=0.3,
+    svg=0.2,
+    bg=0.2,
     audio=0.3,
-    video=0.3,
+    video=0.2,
     canvas=0.2,
     bgString=0.3,
     bgNumber=0.3
@@ -59,7 +59,7 @@ export declare interface IGrowElement{
     /**
      * 原始对象
      */
-    el:object,
+    el:HTMLElement|null,
     /**
      * 动画开始时间
      */
@@ -94,25 +94,27 @@ export declare interface IGrowHTMLElement extends IGrowElement{
     /**
      * 元素tagName
      */                   
-    tagName:string
-    /**
-     * 元素类型，不同类型有不同动画效果
-     */    
-    type:EGrowElementType
+    tagName:string|undefined
+    
     /**
      * 原始对象<覆盖基类>
      */
-    el:HTMLElement
+    el:HTMLElement|null
     children: Array<Array<IGrowHTMLElement>>,
     /**
       * 动画时长
       */
      duration: number,
-    
+     tl: GrowTimeLine
+    /**
+     * 元素类型，不同类型有不同动画效果
+     */    
+     type?:EGrowElementType
      /**
      * 动画对象<覆盖基类>
      */
     grow?:GrowTween
+    
     
     
 }

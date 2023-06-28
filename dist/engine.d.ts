@@ -1,7 +1,9 @@
 import { EGrowType } from './rule';
 import { GrowTimeLine } from './animate';
+import { gsap } from 'gsap';
+export { gsap };
 export interface PageGrowOption {
-    target: any;
+    target: string | HTMLElement | Array<object> | null;
     growType: EGrowType;
     interval: number;
     stringType: string;
@@ -11,15 +13,31 @@ export interface PageGrowOption {
     svgType: string;
     canvasType: string;
     videoType: string;
+    chartType: string;
     leafNodeType: string;
     customTl: Array<CustomTl>;
     anovSimpleMode: boolean;
     parseLayer: number;
+    tls: Array<object>;
+    parts?: [];
+    labels?: {};
+    reversedCallback: Callback;
+    completeCallback: Callback;
 }
+interface initOption {
+    type: number;
+    target?: string | HTMLElement | Array<object> | null;
+    config?: object;
+    labels?: object;
+    tls?: Array<object>;
+    reversedCallback: Callback;
+    completeCallback: Callback;
+}
+type Callback = () => void;
 /**
  * 自定义动画对象
  */
-export interface CustomTl {
+interface CustomTl {
     target: any;
     tl: GrowTimeLine;
 }
@@ -29,14 +47,14 @@ export interface EffectObj {
     props: object;
     props2: object;
 }
-export declare class PageGrow {
-    option: PageGrowOption;
-    private _animateController;
-    constructor(opt: PageGrowOption);
-    enter(): void;
-    leave(): void;
+declare const pageGrow: {
+    gsap: typeof globalThis.gsap;
+    option: {};
+    tl: gsap.core.Timeline;
+    els: never[];
+    init(opt: initOption): GrowTimeLine | undefined;
+    leave(reversedCallback: Function, timeScale: number): void;
     stop(): void;
-    creatTl(): GrowTimeLine;
-    addEffect(effectList: Array<EffectObj>): void;
-}
-export { gsap } from 'gsap';
+    play(): void;
+};
+export { pageGrow };

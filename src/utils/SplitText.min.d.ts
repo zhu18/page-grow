@@ -1,55 +1,57 @@
-// declare namespace SplitText{
-//     const aa: string
+
+
+// declare namespace DrawSVGPlugin{
+    
 // }
-// export as namespace SplitText
-// export = SplitText
+// export as namespace DrawSVGPlugin
+// export = DrawSVGPlugin
 
+// declare type mode = "words" | "chars" | "lines";
 
-// declare const SplitText: object
+// declare type modes = Array<mode>;
 
-// declare module '*/SplitText.min.js'{
-//     export const SplitText: void
+// declare interface options{
+//     type: mode
 // }
 
-// declare namespace SplitText{
-//     const aa: string
+// declare class SplitText {
+//     options: {
+//         WORDS: mode;
+//         CHARS: mode;
+//         LINES: mode;
+//     };
+//     words: string[];
+//     chars: string[];
+//     lines: string[];
+//     elements: HTMLElement;
+//     type: modes;
+//     constructor(element: HTMLElement, options: options);
+//     splitWords(element: any): any[];
+//     splitChars(element: any): any[];
+//     searchTextNode(element: HTMLElement): string[];
+//     init(): void;
 // }
-
-// declare class Greeter {
-//     constructor(greeting: string);
-//     greeting: string;
-//     showGreeting(): void;
-//   }
-
-//   export = Greeter
+// export default SplitText;
 
 
 
-declare type mode = "words" | "chars" | "lines";
-
-declare type modes = Array<mode>;
-
-declare interface options{
-    type: mode
+declare namespace SplitText {
+  interface Vars {
+    
+  }
 }
+declare namespace gsap {
 
-declare class SplitText {
-    options: {
-        WORDS: mode;
-        CHARS: mode;
-        LINES: mode;
-    };
-    words: string[];
-    chars: string[];
-    lines: string[];
-    elements: HTMLElement;
-    type: modes;
-    constructor(element: HTMLElement, options: options);
-    splitWords(element: any): any[];
-    splitChars(element: any): any[];
-    searchTextNode(element: HTMLElement): string[];
-    init(): void;
-}
-export default SplitText;
   
+}
 
+declare namespace gsap.plugins {
+  interface SplitText extends Plugin {
+      
+  }
+}
+
+declare const SplitText: gsap.plugins.SplitText;
+
+export as namespace SplitText
+export = SplitText

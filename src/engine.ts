@@ -1,11 +1,27 @@
 import type {IDisposable, IGrowElement, IGrowHTMLElement} from './common'
 import {IParserRule, RuleFactory, EGrowType}  from './rule'
 import  {HTMLPageParser}  from './parser'
-import  {HTMLGrowAnimateController, GrowTimeLine}  from './animate'
-import { gsap} from "gsap";
+import  {HTMLGrowAnimateController, GrowTimeLine, isTl}  from './animate'
+import {defaultConfig} from './config.js'
+import {parseTarget, rangRandom} from './utils/tool'
+import {gsap} from 'gsap'
+import { Draggable } from 'gsap/Draggable'
+import SplitText from "./utils/SplitText.min";
+import ScrambleTextPlugin from './utils/ScrambleTextPlugin3.min'
+import DrawSVGPlugin from './utils/DrawSVGPlugin3.min'
+import { CustomEase } from "gsap/CustomEase";
 
-export  interface PageGrowOption{
-    target:any, // 动画对象
+
+gsap.registerPlugin(Draggable)
+gsap.registerPlugin(ScrambleTextPlugin)
+gsap.registerPlugin(SplitText)
+gsap.registerPlugin(CustomEase)
+gsap.registerPlugin(DrawSVGPlugin)
+
+gsap.SplitText = SplitText
+export {gsap}
+export interface PageGrowOption{
+    target: string | HTMLElement | Array<object> | null, // 动画对象,支持类名、id、dom对象、配置文件(类似于dev parts.js)
     growType:EGrowType, //动画类型
     interval: number, // 块之间动画间隔
     stringType: string, //文本动画类型
@@ -15,18 +31,35 @@ export  interface PageGrowOption{
     svgType: string,//svg动画类型
     canvasType: string,//canvas动画类型
     videoType: string,//video动画类型
+    chartType: string, //chart元素动画类型
     leafNodeType: string, //叶子节点动画类型
     customTl: Array<CustomTl>, //自定义动画
     anovSimpleMode: boolean, //是否基于anov使用简单模式
     parseLayer: number, //解析dom层级
+    tls: Array<object>, //传入子组件动画线及动画对象
+    parts?: [], //传入json配置项
+    labels?: {},
+    reversedCallback: Callback,
+    completeCallback: Callback,
 }
 
+interface initOption{
+    type: number,
+    target?: string | HTMLElement | Array<object> | null,
+    config?: object,
+    labels?: object,
+    tls?: Array<object>,
+    reversedCallback: Callback,
+    completeCallback: Callback,
 
+}
+
+type Callback = () => void
 
 /**
  * 自定义动画对象
  */
-export interface CustomTl{
+interface CustomTl{
     target: any, //动画对象
     tl: GrowTimeLine //自定义该动画对象时间线
 }
@@ -39,47 +72,88 @@ export interface EffectObj{
     // callback: (target: HTMLElement, config: any) => {}, //动画效果回调函数
 }
 
-export class PageGrow{
+class PageGrow{
 
-    public option:PageGrowOption
-    private _animateController:HTMLGrowAnimateController
+    public option?:PageGrowOption | undefined
+    public _animateController?:HTMLGrowAnimateController
 
-    constructor(opt:PageGrowOption){
+    constructor(opt:initOption){
+        
         // 设置默认参数
-        this.option = {
-            target: opt?.target??document.body,
-            growType: opt?.growType??3,
-            interval: opt?.interval??0.2,
-            stringType: opt?.stringType?? 'sys_stringWave',
-            numberType: opt?.numberType??'sys_number',
-            bgType: opt?.bgType??'sys_scale',
-            imageType: opt?.imageType??'sys_scale',
-            svgType: opt?.svgType??'sys_scale',
-            canvasType: opt?.canvasType??'sys_scale',
-            videoType: opt?.videoType??'sys_scale',
-            leafNodeType: opt?.leafNodeType??'sys_scale',
-            customTl: [],
-            anovSimpleMode: opt?.anovSimpleMode??false,
-            parseLayer: opt?.parseLayer??0,
-        }
+        this.option = this._initOption(opt)
         //配置解析规则
         // const rule:IParserRule = RuleFactory.create({growType:<EGrowType>Number(opt.growType)})
-        const rule:IParserRule = RuleFactory.create(this.option)
-        //构建解析器
-        const parser:HTMLPageParser = new HTMLPageParser(rule)
-        //开始解析
-        const els:Array<IGrowHTMLElement> = parser.parse(this.option)
-        //对象列表按类型预定动画方案
-        this._animateController=new HTMLGrowAnimateController(els, this.option)
-      
+        if(this.option){
+            const rule:IParserRule = RuleFactory.create(this.option)
+            //构建解析器
+            const parser = new HTMLPageParser(rule)
+            //开始解析
+            const els:Array<IGrowHTMLElement> = parser.parse(this.option)
+            //对象列表按类型预定动画方案
+            this._animateController=new HTMLGrowAnimateController(els, this.option)
+        }
     }
 
+    /**
+     * 初始化参数
+     * @param opt 
+     * @returns 
+     */
+    private _initOption(opt: any): any{
+        let defaultOpt = {
+            type: 2
+        },option: initOption
+        // if(!opt?.target)  return 
+        if(!opt || !opt?.target) {
+            console.warn('请传入动画对象!')
+            return 
+        }
+        if(opt && !opt.type) {
+            option = {...opt, ...defaultOpt}
+        }else {
+            option = {...opt}
+        }
+        let target = parseTarget(option?.target)
+        let config = this._parseOption(option)
+        return {
+            target,
+            ...config,
+            tls: option?.tls || [],
+            labels: option?.labels || {},
+            reversedCallback: option.reversedCallback,
+            completeCallback: option.completeCallback,
+
+        }
+    }
+
+    /**
+     * 参数解析
+     * @param opt 
+     * @returns 
+     */
+    private _parseOption(opt: initOption){
+        let config:object = {}, growType: EGrowType = 2
+
+        defaultConfig.forEach(item => {
+            if(item.type == opt.type){
+                config = item.config
+                growType = item.growType || item.config.growType
+            }
+        })
+        // if(opt.type == 1) return Object.assign({growType}, config, opt.config)
+        // if(opt.config?.interval) return {growType, ...config, interval: opt.config?.interval }
+
+        return Object.assign({growType}, config, opt.config)
+
+        return Object.assign({growType}, config)
+        
+    }
     
     public enter():void{
         let tl = this.creatTl()
-        if(tl.duration() - 0 > 0){
+        if(tl && tl?.duration() > 0){
             //执行进场
-            tl.play()
+            tl?.play()
         }else {
             console.log(`the timeline can not paly`)
         }
@@ -87,21 +161,65 @@ export class PageGrow{
     }
 
     public leave():void{
-        this._animateController.leave()
+        this._animateController?.leave()
     }
 
     public stop():void{
-        this._animateController.stop()
+        this._animateController?.stop()
     }
-    public creatTl():GrowTimeLine{
-        let tl = this._animateController.creatTl()
+    public creatTl():GrowTimeLine|undefined{
+        let tl = this._animateController?.creatTl()
+        if(tl && (tl?.duration() - 0 > 5 ) ){
+            tl?.duration(rangRandom(4, 5))
+        }
+        if(this.option?.target && this.option.target instanceof Array && this.option.target.length){
+            if(tl && (tl?.duration() - 0 < 2 ) ){
+                tl?.duration(rangRandom(2, 3))
+            }
+        }
+        
         return tl
     }
 
     public addEffect(effectList:Array<EffectObj>):void{
-        this._animateController.addEffect(effectList)
+        this._animateController?.addEffect(effectList)
     }
 }
 
-export {gsap} from 'gsap'
+const pageGrow = {
+    gsap,
+    option: {},
+    tl: gsap.timeline(),
+    els: [],
+    init(opt:initOption){
+        pageGrow.tl?.eventCallback("onComplete", () => {
+            if(typeof opt.completeCallback == 'function'){
+                opt.completeCallback()
+            }
+        })
+        let pageGrowInstance = new PageGrow({ ...opt })
+        pageGrow.option = pageGrowInstance.option!
+        pageGrow.gsap = pageGrowInstance._animateController?.gsap
+        let tl = pageGrowInstance.creatTl()
+        pageGrow.tl = tl!
+        pageGrow.els = pageGrowInstance._animateController?._els
+        return tl
+    },
+    leave(reversedCallback: Function, timeScale:number){
+        pageGrow.tl?.eventCallback("onReverseComplete", () => {
+            if(typeof reversedCallback == 'function'){
+                reversedCallback()
+            }
+        })
+        if(isTl(pageGrow.tl))  pageGrow.tl.timeScale(timeScale || 2).reverse()
+    },
+    stop(){
+        if(isTl(pageGrow.tl)) pageGrow.tl.pause()
+    },
+    play(){
+        if(isTl(pageGrow.tl))  pageGrow.tl.play()
+    }
+
+}
+export {pageGrow} 
 

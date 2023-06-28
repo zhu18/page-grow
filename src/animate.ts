@@ -1,12 +1,7 @@
 import { IGrowHTMLElement,EGrowElementType, StringGrowType, EGrowElementTime } from "./common"
 import { EGrowType } from './rule'
-import {PageGrowOption, EffectObj} from './engine'
-import { gsap} from "gsap";
-import SplitText from "./utils/SplitText.min";
-import ScrambleTextPlugin from './utils/ScrambleTextPlugin3.min'
+import {PageGrowOption, EffectObj, gsap} from './engine'
 import {fomatterNum} from './utils/tool'
-
-
 
 /**
  * 动画基础规则接口
@@ -47,7 +42,7 @@ export class GrowTimeLine extends gsap.core.Timeline{
 export class HTMLGrowAnimateController implements IGrowAnimateController{
     constructor(elements:Array<IGrowHTMLElement>, opt:PageGrowOption){
         this._option = opt
-        this._els = elements     
+        this._els = elements  
         //注册通用动画    
         this._registerEffects()
         //构建动画线      
@@ -55,15 +50,14 @@ export class HTMLGrowAnimateController implements IGrowAnimateController{
         // this._tl= gsap.timeline()
         
     }
-    private _els:Array<IGrowHTMLElement>
-    private _tl:GrowTimeLine   
+    public _els:Array<IGrowHTMLElement>
+    public _tl:GrowTimeLine   
     private _option:PageGrowOption
 
     private _init(){
         this._tl.add(this._getTl(this._els))
         return this._tl 
     }
-
     /**
      * 获取动画线
      * @param els 
@@ -71,21 +65,34 @@ export class HTMLGrowAnimateController implements IGrowAnimateController{
      */
     private _getTl(els: Array<IGrowHTMLElement>): GrowTimeLine{
         let parentTl = new GrowTimeLine()
-        parentTl.addLabel('start')
+        parentTl.addLabel('startParentTl')
         for(let i = 0; i < els.length; i++){
+
+            let startTime = 0
+            if(!this._option.labels || JSON.stringify(this._option.labels) == '{}'){
+                startTime = i * this._option.interval
+            }
+
             let childTl = new GrowTimeLine()
-            childTl.addLabel('start')
+            childTl.addLabel('startChildTl')
             //判断该元素是否有自定义动画线
             let customTl = this._elementHasCustomTl(els[i])
-            if(customTl.duration()){
-                parentTl.add(customTl, 'start+=0')
+            if(customTl.duration() && customTl instanceof gsap.core.Animation){
+                parentTl.add(customTl, 'start+=' + startTime)
             }else {
-                parentTl.add(this._setElementAnimate(els[i]), 'start+=0')
-                if(els[i].children.length){
-                    childTl = this._getTlRecurve(els[i].children)
+                if(isTl(els[i].tl)){
+                    parentTl.add(els[i].tl, 'start+=' + startTime)
+
+                }else {
+                    let tw = this._setElementAnimate(els[i])
+                        tw.then(() => {els[i].el.style.overflow = 'inherit' })
+                    parentTl.add(tw, 'start+=' + startTime)
+                    if(els[i].children.length){
+                        childTl = this._getTlRecurve(els[i].children)
+                    }
                 }
             }
-            parentTl.add(childTl, 'start+=0')
+            isTl(childTl) && parentTl.add(childTl, 'start+=' + startTime)
         }
         return parentTl
     }
@@ -109,20 +116,31 @@ export class HTMLGrowAnimateController implements IGrowAnimateController{
                 //判断该元素是否有自定义动画线
                 let customTl = this._elementHasCustomTl(els[i][j])
                 if(customTl.duration()){
-                    tl.add(customTl, 'start+=0')
+                    tl.add(customTl, 'start+=' + els[i][j].startTime)
                 }else {
-                    tl.add(this._setElementAnimate(els[i][j]), 'start+=0')
-                    if(els[i][j].children.length){
-                        tl.add(this._getTlRecurve(els[i][j].children), 'start+=0')
+                    if(isTl(els[i][j].tl)){
+                        tl.add(els[i][j].tl, 'start+=' + els[i][j].startTime)
+                    }else {
+                        let tw = this._setElementAnimate(els[i][j])
+                        tw.then(() => {els[i][j].el.style.overflow = 'inherit'})
+                        tl.add(tw, 'start+=' + els[i][j].startTime)
+                        if(els[i][j].children.length){
+                            tl.add(this._getTlRecurve(els[i][j].children), 'start+=' + els[i][j].startTime)
+                        }
                     }
+                    
                 }
-                childTl.add(tl, 'start+=0')
+                isTl(tl) && childTl.add(tl, 'start+=' + els[i][j].startTime)
                 minDuration = minDuration ? Math.min(minDuration, tl.duration()) :tl.duration()
             }
             //获取某一行各模块最小动画时间，与interval比较，得到下一行开始时间
             // minDuration = Math.min(minDuration, this._option.interval)
             // totalMin += minDuration
-            parentTl.add(childTl, 'start+=' + i * this._option.interval)
+            let startTime = 0
+            if(!this._option.labels || JSON.stringify(this._option.labels) == '{}'){
+                startTime = i * this._option.interval
+            }
+            isTl(childTl) && parentTl.add(childTl, 'start+=' + startTime)
         }
         return parentTl
     }
@@ -138,9 +156,8 @@ export class HTMLGrowAnimateController implements IGrowAnimateController{
         this._tl.play()
     }
     creatTl(): GrowTimeLine{
-        gsap.registerPlugin(ScrambleTextPlugin)
+        // gsap.registerPlugin(SplitText)
         if(!this._tl.duration()){
-            
              //为所有元素初始化动画任务
              let tl = this._init()
              return tl
@@ -180,42 +197,42 @@ export class HTMLGrowAnimateController implements IGrowAnimateController{
         switch(element.type){
             case EGrowElementType.chart:
                 // gt=new GrowTween(element.el,{duration: 1, background:'red',opacity: 1})
-                gt = gsap.effects.sys_opacity(element.el, {duration: EGrowElementTime.chart})
+                gt = gsap.effects[this._option.chartType](element.el, {duration: EGrowElementTime.chart, originalStyle: element.originalStyle})
                 break;
             case EGrowElementType.bg:
-                gt = gsap.effects[this._option.bgType](element.el, {duration: EGrowElementTime.bg})
+                gt = gsap.effects[this._option.bgType](element.el, {duration: EGrowElementTime.bg, originalStyle: element.originalStyle})
                 // gt = gsap.effects[this._option.bgType](element.el, {duration: EGrowElementTime.bg, originalStyle: element.originalStyle})
                 break;
             case EGrowElementType.image:
                 gt = gsap.effects[this._option.imageType](element.el, {duration: EGrowElementTime.image, originalStyle: element.originalStyle})
                 break;
             case EGrowElementType.svg:
-                gt = gsap.effects[this._option.svgType](element.el, {duration: EGrowElementTime.svg})
+                gt = gsap.effects[this._option.svgType](element.el, {duration: EGrowElementTime.svg, originalStyle: element.originalStyle})
                 break;
             case EGrowElementType.canvas:
-                gt = gsap.effects[this._option.canvasType](element.el, {duration: EGrowElementTime.svg})
+                gt = gsap.effects[this._option.canvasType](element.el, {duration: EGrowElementTime.svg, originalStyle: element.originalStyle})
                 break;
             case EGrowElementType.video:
-                gt = gsap.effects[this._option.videoType](element.el, {duration: EGrowElementTime.video})
+                gt = gsap.effects[this._option.videoType](element.el, {duration: EGrowElementTime.video, originalStyle: element.originalStyle})
                 break;
             case EGrowElementType.string:
-                gt=gsap.effects[this._option.stringType](element.el, {duration: EGrowElementTime.string})
+                gt=gsap.effects[this._option.stringType](element.el, {duration: EGrowElementTime.string, originalStyle: element.originalStyle})
                 break;
             case EGrowElementType.number:
-                gt=gsap.effects[this._option.numberType](element.el, {duration: EGrowElementTime.number, value: element.el.innerHTML})
+                gt=gsap.effects[this._option.numberType](element.el, {duration: EGrowElementTime.number, value: element.el?.innerHTML, originalStyle: element.originalStyle})
                 break;
             case EGrowElementType.bgNumber:
-                gt=gsap.effects.sys_bgNumber(element.el, {duration: EGrowElementTime.bgNumber, value: element.el.innerHTML})
+                gt=gsap.effects.sys_bgNumber(element.el, {duration: EGrowElementTime.bgNumber, value: element.el?.innerHTML, originalStyle: element.originalStyle})
                 break;
             case EGrowElementType.bgString:
-                gt=gsap.effects.sys_opacity(element.el, {duration: EGrowElementTime.bgString, value: element.el.innerHTML})
+                gt=gsap.effects.sys_opacity(element.el, {duration: EGrowElementTime.bgString, value: element.el?.innerHTML, originalStyle: element.originalStyle})
                 break;
             case EGrowElementType.leafNode:
                 // gt=gsap.effects[this._option.leafNodeType](element.el, {duration: EGrowElementTime.string})
                 gt=gsap.effects[this._option.leafNodeType](element.el, {duration: EGrowElementTime.bg, originalStyle: element.originalStyle})
                 break;
             case EGrowElementType.none:
-                gt=new GrowTween(element.el,{duration: 0})
+                gt = new GrowTween(element.el,{duration: 0})
                 break;
             default://none
                 gt=new GrowTween(element.el,{duration: 0})
@@ -253,14 +270,14 @@ export class HTMLGrowAnimateController implements IGrowAnimateController{
         //高度变化
         gsap.registerEffect({
             name:'sys_height',
-            effect: (targets: HTMLElement, config: { duration: 1,  originalStyle:any }) => {
-                return gsap.fromTo(targets, {opacity: 0, height: 0}, {opacity: 1, height: config.originalStyle.height,  duration: config.duration});
+            effect: (targets: any, config: { duration: 1,  originalStyle:any }) => {
+                return gsap.fromTo(targets, {opacity: 0, height: 0}, {opacity: 1,  height: config.originalStyle.height,  duration: config.duration});
             },
         })
         //宽度变化
         gsap.registerEffect({
             name:'sys_width',
-            effect: (targets: HTMLElement, config: { duration: 1,  originalStyle:any }) => {
+            effect: (targets: any, config: { duration: 1,  originalStyle:any }) => {
                 return gsap.fromTo(targets, {opacity: 0, width: 0}, {opacity: 1,  width: config.originalStyle.width,  duration: config.duration});
             },
         })
@@ -294,25 +311,28 @@ export class HTMLGrowAnimateController implements IGrowAnimateController{
         gsap.registerEffect({
             name:'sys_stringWave',
             effect: (targets: HTMLElement|any, config: { duration: 1}) => {
-                let duration = targets[0].innerHTML.length / 200 * config.duration
-                let mySplitText  = new SplitText(targets, {type: "chars"})
+                let {duration, stagger} = this._computedStringDuration(targets[0].innerHTML.length)
+                let mySplitText  = new gsap.SplitText(targets, {type: "chars"})
                 let chars = mySplitText.chars
-                gsap.set(targets, {opacity:1,perspective: 400})
-                return gsap.from(chars, {duration: duration, opacity:0, scale:0, y:80, rotationX:100, transformOrigin:"0% 50% -50", ease:"back", stagger: 0.01});
+                gsap.set(targets, {perspective: 400})
+                // return gsap.to(targets, {duration: 0.01, opacity: 1, onComplete: () => {
+                //     gsap.from(chars, {duration: duration, opacity:0, scale:0, y:80, rotationX:100, transformOrigin:"0% 50% -50", ease:"back", stagger: stagger});
+                // }})
+                return gsap.from(chars, {duration: duration, opacity:0, scale:0, y:80, rotationX:100, transformOrigin:"0% 50% -50", ease:"back", stagger: stagger});
             },
         })
         //stringPrint
         gsap.registerEffect({
             name:'sys_stringPrint',
             effect: (targets: HTMLElement|any, config: { duration: 1}) => {
-                let duration = targets[0].innerHTML.length / 50 * config.duration
+                let {duration, stagger} = this._computedStringDuration(targets[0].innerHTML.length)
                 let opt = {
                     text: targets[0].innerHTML,
                     chars: " ",
                     speed: 0.2,
                     ease: "none"
                 }
-                // gsap.set(targets, { opacity: 1})
+                gsap.set(targets, { opacity: 1})
                 return gsap.to(targets, {duration: duration, scrambleText: {...opt}})
             },
         })
@@ -387,11 +407,37 @@ export class HTMLGrowAnimateController implements IGrowAnimateController{
     //判断元素是否有自定义动画线
     private _elementHasCustomTl(element: IGrowHTMLElement): GrowTimeLine{
         let tl:GrowTimeLine = new GrowTimeLine({})
-        this._option.customTl.forEach((item ,index) => {
+        this._option.customTl?.forEach((item ,index) => {
             if((item.target === element.el) && (item.tl instanceof  GrowTimeLine)){
                 tl =  item.tl
             }
         })
         return tl
     }
+    //获取文字动画时间
+    private _computedStringDuration(len: number): any{
+        let duration:number = 0, stagger:number = 0.01
+        if(len > 1000){
+            duration = 1
+        }else if(len > 500){
+            duration = 0.6
+        }else if(len > 200){
+            duration = 0.4
+        }else{
+            duration = 0.3
+            stagger = 0.03
+        }
+        return {
+            duration,
+            stagger
+        }
+
+    }
+    
+
+}
+//判断是否为动画线
+export function  isTl(tl: GrowTimeLine): boolean{
+    if(tl && tl instanceof gsap.core.Animation && tl.duration() - 0 > 0) return true
+    return false
 }

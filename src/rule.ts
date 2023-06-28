@@ -7,10 +7,10 @@ import {PageGrowOption} from './engine'
  */
 export enum EGrowType{
     LeftToRight=1,
-    RightToLeft=2,
-    TopToBottom=3,
-    BottomToTop=4,
-    LeftTopToRightBottom=5,
+    TopToBottom=2,
+    LeftTopToRightBottom=3,
+    RightToLeft=4,
+    BottomToTop=5,
     CenterToAround=6
     // 待扩展..
 }
@@ -65,6 +65,7 @@ export class TopToBottomParserRule implements IParserRule{
     exec(elements:Array<IGrowElement>): void {
           //TopToBottom 进场排序
           elements = getOrderTopToBottom(elements)
+
     }   
 }
 /**
@@ -98,12 +99,12 @@ export class CenterToAroundParserRule implements IParserRule{
  * @returns 
  */
 function getOrderTopToBottom(elements:Array<IGrowElement>): Array<IGrowHTMLElement>{
-    
     let orderArr = orderTopToBottom(elements)
-
     for(let i = 0; i < orderArr.length; i++){
         for(let j = 0 ; j < orderArr[i].length; j++){
-            orderArr[i][j].children = getOrderTopToBottom(orderArr[i][j].children)
+            if(orderArr[i][j].children.length){
+                orderArr[i][j].children = getOrderTopToBottom(orderArr[i][j].children)
+            }
         }
     }
     return orderArr
@@ -161,7 +162,9 @@ function orderTopToBottom(elements:Array<IGrowElement>): any{
     let orderArr = orderLeftToRight(elements)
     for(let i = 0; i < orderArr.length; i++){
         for(let j = 0 ; j < orderArr[i].length; j++){
-            orderArr[i][j].children = getOrderLeftToRight(orderArr[i][j].children)
+            if(orderArr[i][j].children.length){
+                 orderArr[i][j].children = getOrderLeftToRight(orderArr[i][j].children)
+            }
         }
     }
     return orderArr
@@ -214,7 +217,9 @@ function getOrderLeftTopToRightBottom(elements:Array<IGrowElement>): Array<IGrow
 
     for(let i = 0; i < orderArr.length; i++){
         for(let j = 0 ; j < orderArr[i].length; j++){
-            orderArr[i][j].children = getOrderLeftTopToRightBottom(orderArr[i][j].children)
+            if(orderArr[i][j].children.length){
+                orderArr[i][j].children = getOrderLeftTopToRightBottom(orderArr[i][j].children)
+           }
         }
     }
     return orderArr

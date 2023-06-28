@@ -53,6 +53,6 @@
     "doc": "docs"
   },
   "dependencies": {
-    "gsap": "^3.11.4"
+    "gsap": "^3.12.1"
   }
 }

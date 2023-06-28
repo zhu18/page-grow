@@ -30,6 +30,7 @@
   <body>
         <div class="container" id="container">
             <div class="box box1" id="box1">
+                测试文字测试文字测试文字
                 <span>2500个</span>
                 <p class="text"> ANO</p>
             </div>
@@ -37,7 +38,11 @@
             <div class="box box1" id="box3">
                 <div class="red-bg"></div>
             </div>
-            <div class="box box7" id="box7"></div>
+            <div class="box7" id="box7">
+                <div>
+                    <p>图例的数据数组。数组项通常为一个字符串</p>
+                </div>
+            </div>
 
             <div class="box box2" id="box4">
                 <div class="wrapper-bg">
@@ -81,11 +86,22 @@
         
     <!-- <script  type="module" src="../index.esm.js"></script> -->
     <script type="module">
-        import {PageGrow} from '../index.esm.js';
-                let pageGrow = new PageGrow({growType: 1, parseLayer: 3})
-                window.pageGrow = pageGrow
-                
+        import {pageGrow} from '../index.esm.js';
+        window.pageGrow1 = pageGrow
+        // pageGrow.init({
+        //     target: document.getElementById('container'),
+        //     type: 2,
+        //     config: {
+        //         interval: 0.1,
+        //         parseLayer: 2
+        //     }
+        // }) 
+        // //退场
+        // pageGrow.leave(reverseCallback)   
 
+        // function reverseCallback(){
+        //     console.log('reversed!!!')
+        // }
             
         
     </script>
