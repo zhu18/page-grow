@@ -18,6 +18,8 @@ gsap.registerPlugin(SplitText)
 gsap.registerPlugin(CustomEase)
 gsap.registerPlugin(DrawSVGPlugin)
 
+
+
 gsap.SplitText = SplitText
 export {gsap}
 export interface PageGrowOption{
@@ -189,6 +191,7 @@ class PageGrow{
 const pageGrow = {
     gsap,
     option: {},
+    config: defaultConfig,
     tl: gsap.timeline(),
     els: [],
     init(opt:initOption){

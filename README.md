@@ -1,17 +1,58 @@
 # page-grow
 页面进出场动画管理，零配置，高扩展，是可视化大屏或其他要求炫酷的商业网站必备插件。
 
-    // "rollup": "2.8.1",
-    // "@rollup/plugin-terser": "^0.4.0",
-    // "@rollup/plugin-node-resolve": "^15.0.1",
-    // "@rollup/plugin-commonjs": "^13.0.6",
-    // "rollup-plugin-eslint":"^5.1.0",
-    // "@rollup/plugin-typescript":"^11.0.0",
-    // "rollup-plugin-filesize": "^9.1.2",
-    // "rollup-plugin-visualizer": "^5.9.0",
-    // "rollup-plugin-buble": "^0.19.8",
-    // "@babel/core": "^7.2.2",
-    // "@babel/plugin-external-helpers": "^7.2.0",
-    // "@babel/plugin-transform-parameters": "^7.2.0",
-    // "@babel/plugin-transform-runtime": "^7.2.0",
-    // "@babel/preset-env": "^7.2.3",
+## Install
+
+```
+npm i page-grow
+```
+## Usage
+
+```
+import {pageGrow} from 'page-grow'
+```
+
+动画初始化，如下所示：
+```
+<!-- 初始化参数 -->
+let option = {
+    target: document.getElementById('container'),
+    type: 2,
+    config: {
+        interval: 0.1,
+        parseLayer: 2
+    }
+}
+
+<!-- 调用初始化方法 -->
+pageGrow.init(option) 
+```
+初始化参数说明如下：
+| 参 数          | 说 明           |   类 型  | 默认值 |  是否必填 |
+| ------------- |:---------------:| :-----:|:-------:|:-------:|
+| target          | 动画对象          |  HTMLElement/string  |  | 是 |
+| type          | 动画类型，可选类型参考`pageGrow.config` |  number  | 2 | 否 |
+| config          | 配置参数          |  object  | {} | 否 |
+
+`config`具体配置参数如下：
+| 参 数          | 说 明           |   类 型  | 默认值 |
+| ------------- |:---------------| :-----:|-------|
+| interval          | 动画间隔          |  number  |  0.02|
+| parseLayer          | 解析层数          |  number  |  1|
+| bgType          | 背景元素动画效果类型          |  string  |  sys_opacity|
+| stringType          | 字符串元素动画效果类型          |  string  |  sys_opacity|
+| numberType          | 数字元素动画效果类型          |  string  |  sys_opacity|
+| imageType          | 图片元素动画效果类型          |  string  |  sys_opacity|
+| svgType          | svg元素动画效果类型          |  string  |  sys_opacity|
+| canvasType          | canvas元素动画效果类型          |  string  |  sys_opacity|
+| videoType          | video元素动画效果类型          |  string  |  sys_opacity|
+| chartType          | 图表元素动画效果类型          |  string  |  sys_opacity|
+| leafNodeType          | 叶子元素动画效果类型          |  string  |  sys_opacity|
+
+
+
+动画退场，如下所示：
+```
+pageGrow.leave(reverseCallback, timeScale)
+```
+其中， `reverseCallback`表示动画退场完成回调函数，`timeScale`表示退场速率。
