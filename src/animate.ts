@@ -1,6 +1,6 @@
-import { IGrowHTMLElement,EGrowElementType, StringGrowType, EGrowElementTime } from "./common"
+import { IGrowHTMLElement,EGrowElementType,  EGrowElementTime, gsap } from "./common"
 import { EGrowType } from './rule'
-import {PageGrowOption, EffectObj, gsap} from './engine'
+import {PageGrowOption, EffectObj} from './engine'
 import {fomatterNum} from './utils/tool'
 
 /**
@@ -77,7 +77,7 @@ export class HTMLGrowAnimateController implements IGrowAnimateController{
             childTl.addLabel('startChildTl')
             //判断该元素是否有自定义动画线
             let customTl = this._elementHasCustomTl(els[i])
-            if(customTl.duration() && customTl instanceof gsap.core.Animation){
+            if(isTl(customTl)){
                 parentTl.add(customTl, 'start+=' + startTime)
             }else {
                 if(isTl(els[i].tl)){

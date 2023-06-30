@@ -40,569 +40,6 @@ var __assign = function() {
     return __assign.apply(this, arguments);
 };
 
-/**
- * 动画对象类型
- */
-var EGrowElementType;
-(function (EGrowElementType) {
-    EGrowElementType[EGrowElementType["number"] = 0] = "number";
-    EGrowElementType[EGrowElementType["string"] = 1] = "string";
-    EGrowElementType[EGrowElementType["image"] = 2] = "image";
-    EGrowElementType[EGrowElementType["chart"] = 3] = "chart";
-    EGrowElementType[EGrowElementType["none"] = 4] = "none";
-    EGrowElementType[EGrowElementType["svg"] = 5] = "svg";
-    EGrowElementType[EGrowElementType["bg"] = 6] = "bg";
-    EGrowElementType[EGrowElementType["video"] = 7] = "video";
-    EGrowElementType[EGrowElementType["canvas"] = 8] = "canvas";
-    EGrowElementType[EGrowElementType["bgString"] = 9] = "bgString";
-    EGrowElementType[EGrowElementType["bgNumber"] = 10] = "bgNumber";
-    EGrowElementType[EGrowElementType["style"] = 11] = "style";
-    EGrowElementType[EGrowElementType["leafNode"] = 12] = "leafNode";
-    //...
-})(EGrowElementType || (EGrowElementType = {}));
-var EGrowElementTime;
-(function (EGrowElementTime) {
-    EGrowElementTime[EGrowElementTime["number"] = 0.3] = "number";
-    EGrowElementTime[EGrowElementTime["string"] = 0.3] = "string";
-    EGrowElementTime[EGrowElementTime["image"] = 0.2] = "image";
-    EGrowElementTime[EGrowElementTime["chart"] = 0.2] = "chart";
-    EGrowElementTime[EGrowElementTime["none"] = 0] = "none";
-    EGrowElementTime[EGrowElementTime["svg"] = 0.2] = "svg";
-    EGrowElementTime[EGrowElementTime["bg"] = 0.2] = "bg";
-    EGrowElementTime[EGrowElementTime["audio"] = 0.3] = "audio";
-    EGrowElementTime[EGrowElementTime["video"] = 0.2] = "video";
-    EGrowElementTime[EGrowElementTime["canvas"] = 0.2] = "canvas";
-    EGrowElementTime[EGrowElementTime["bgString"] = 0.3] = "bgString";
-    EGrowElementTime[EGrowElementTime["bgNumber"] = 0.3] = "bgNumber";
-    //...
-})(EGrowElementTime || (EGrowElementTime = {}));
-// 字符串动画类型
-var StringGrowType;
-(function (StringGrowType) {
-    StringGrowType[StringGrowType["wave"] = 1] = "wave";
-    StringGrowType[StringGrowType["print"] = 2] = "print";
-})(StringGrowType || (StringGrowType = {}));
-
-/**
- * 进场动画方式
- */
-var EGrowType;
-(function (EGrowType) {
-    EGrowType[EGrowType["LeftToRight"] = 1] = "LeftToRight";
-    EGrowType[EGrowType["TopToBottom"] = 2] = "TopToBottom";
-    EGrowType[EGrowType["LeftTopToRightBottom"] = 3] = "LeftTopToRightBottom";
-    EGrowType[EGrowType["RightToLeft"] = 4] = "RightToLeft";
-    EGrowType[EGrowType["BottomToTop"] = 5] = "BottomToTop";
-    EGrowType[EGrowType["CenterToAround"] = 6] = "CenterToAround";
-    // 待扩展..
-})(EGrowType || (EGrowType = {}));
-/**
- * 解析规则工厂，通过参数配置生成解析规则
- */
-var RuleFactory = /** @class */ (function () {
-    function RuleFactory() {
-    }
-    RuleFactory.create = function (opt) {
-        var rule;
-        switch (opt.growType) {
-            case EGrowType.LeftTopToRightBottom:
-                rule = new LeftTopToRightBottomParserRule();
-                break;
-            case EGrowType.TopToBottom:
-                rule = new TopToBottomParserRule();
-                break;
-            case EGrowType.LeftToRight:
-                rule = new LeftToRightParserRule();
-                break;
-            case EGrowType.CenterToAround:
-                rule = new CenterToAroundParserRule();
-                break;
-            default:
-                rule = new LeftTopToRightBottomParserRule();
-                break;
-        }
-        return rule;
-    };
-    return RuleFactory;
-}());
-/**
- * 左上到右下解析规则
- */
-var LeftTopToRightBottomParserRule = /** @class */ (function () {
-    function LeftTopToRightBottomParserRule() {
-    }
-    LeftTopToRightBottomParserRule.prototype.exec = function (elements) {
-        // lerftTopToRightBottom 进场排序    
-        elements = getOrderLeftTopToRightBottom(elements);
-    };
-    return LeftTopToRightBottomParserRule;
-}());
-/**
- * 上到下解析规则
- */
-var TopToBottomParserRule = /** @class */ (function () {
-    function TopToBottomParserRule() {
-    }
-    TopToBottomParserRule.prototype.exec = function (elements) {
-        //TopToBottom 进场排序
-        elements = getOrderTopToBottom(elements);
-    };
-    return TopToBottomParserRule;
-}());
-/**
- * 左到右解析规则
- */
-var LeftToRightParserRule = /** @class */ (function () {
-    function LeftToRightParserRule() {
-    }
-    LeftToRightParserRule.prototype.exec = function (elements) {
-        //LeftToRight 进场排序
-        elements = getOrderLeftToRight(elements);
-    };
-    return LeftToRightParserRule;
-}());
-/**
- * 中间到周围解析规则
- */
-var CenterToAroundParserRule = /** @class */ (function () {
-    function CenterToAroundParserRule() {
-    }
-    CenterToAroundParserRule.prototype.exec = function (elements) {
-        //CenterToAround 进场排序
-        elements.sort(function (a, b) { return a.distance - b.distance; });
-    };
-    return CenterToAroundParserRule;
-}());
-/**
- * 从上到下——递归获取排序后的对象
- * @param elements 需排序的元素对象
- * @returns
- */
-function getOrderTopToBottom(elements) {
-    var orderArr = orderTopToBottom(elements);
-    for (var i = 0; i < orderArr.length; i++) {
-        for (var j = 0; j < orderArr[i].length; j++) {
-            if (orderArr[i][j].children.length) {
-                orderArr[i][j].children = getOrderTopToBottom(orderArr[i][j].children);
-            }
-        }
-    }
-    return orderArr;
-}
-/**
- * 从上到下——根据元素y值排序
- * @param elements
- * @returns 排序后得到二维数组
- */
-function orderTopToBottom(elements) {
-    var t, n = elements.length;
-    // 按元素y值进行排序，得到一个一维数组
-    for (var i = 1; i < n; i++) {
-        for (var j = 0; j < n - i; j++) {
-            if (elements[j].y == elements[j + 1].y && elements[j].x > elements[j + 1].x) {
-                t = elements[j];
-                elements[j] = elements[j + 1];
-                elements[j + 1] = t;
-            }
-            else if (elements[j].y > elements[j + 1].y) {
-                t = elements[j];
-                elements[j] = elements[j + 1];
-                elements[j + 1] = t;
-            }
-        }
-    }
-    // 元素值相等，放入同一数组，最终得到二维数组
-    var newArr = [];
-    for (var i = 0; i < elements.length; i++) {
-        if (newArr.length) {
-            var hasFlag = false;
-            for (var m = 0; m < newArr.length; m++) {
-                if (newArr[m][0].y === elements[i].y) {
-                    newArr[m].push(elements[i]);
-                    hasFlag = true;
-                }
-            }
-            if (!hasFlag) {
-                newArr.push([elements[i]]);
-            }
-        }
-        else {
-            newArr.push([elements[i]]);
-        }
-    }
-    return newArr;
-}
-/**
- * 从左到右——获取排序后的对象
- * @param elements 需排序的元素对象
- * @returns
- */
-function getOrderLeftToRight(elements) {
-    var orderArr = orderLeftToRight(elements);
-    for (var i = 0; i < orderArr.length; i++) {
-        for (var j = 0; j < orderArr[i].length; j++) {
-            if (orderArr[i][j].children.length) {
-                orderArr[i][j].children = getOrderLeftToRight(orderArr[i][j].children);
-            }
-        }
-    }
-    return orderArr;
-}
-/**
- * 从左到右——递归获取排序后的元素对象
- * @param elements
- * @returns
- */
-function orderLeftToRight(elements) {
-    var t, n = elements.length;
-    for (var i = 1; i < n; i++) {
-        for (var j = 0; j < n - i; j++) {
-            if (elements[j].x == elements[j + 1].x && elements[j].y > elements[j + 1].y) {
-                t = elements[j];
-                elements[j] = elements[j + 1];
-                elements[j + 1] = t;
-            }
-            else if (elements[j].x > elements[j + 1].x) {
-                t = elements[j];
-                elements[j] = elements[j + 1];
-                elements[j + 1] = t;
-            }
-        }
-    }
-    var newArr = [];
-    for (var i = 0; i < elements.length; i++) {
-        if (newArr.length) {
-            var hasFlag = false;
-            for (var m = 0; m < newArr.length; m++) {
-                if (newArr[m][0].x === elements[i].x) {
-                    newArr[m].push(elements[i]);
-                    hasFlag = true;
-                }
-            }
-            if (!hasFlag) {
-                newArr.push([elements[i]]);
-            }
-        }
-        else {
-            newArr.push([elements[i]]);
-        }
-    }
-    return newArr;
-}
-function getOrderLeftTopToRightBottom(elements) {
-    var orderArr = orderLeftTopToRightBottom(elements);
-    for (var i = 0; i < orderArr.length; i++) {
-        for (var j = 0; j < orderArr[i].length; j++) {
-            if (orderArr[i][j].children.length) {
-                orderArr[i][j].children = getOrderLeftTopToRightBottom(orderArr[i][j].children);
-            }
-        }
-    }
-    return orderArr;
-}
-function orderLeftTopToRightBottom(elements) {
-    var t, n = elements.length;
-    for (var i = 1; i < n; i++) {
-        for (var j = 0; j < n - i; j++) {
-            if (elements[j].cornerDistance == elements[j + 1].cornerDistance && elements[j].y > elements[j + 1].y) {
-                t = elements[j];
-                elements[j] = elements[j + 1];
-                elements[j + 1] = t;
-            }
-            else if (elements[j].cornerDistance > elements[j + 1].cornerDistance) {
-                t = elements[j];
-                elements[j] = elements[j + 1];
-                elements[j + 1] = t;
-            }
-        }
-    }
-    var newArr = [];
-    for (var i = 0; i < elements.length; i++) {
-        if (newArr.length) {
-            var hasFlag = false;
-            for (var m = 0; m < newArr.length; m++) {
-                if (newArr[m][0].cornerDistance === elements[i].cornerDistance) {
-                    newArr[m].push(elements[i]);
-                    hasFlag = true;
-                }
-            }
-            if (!hasFlag) {
-                newArr.push([elements[i]]);
-            }
-        }
-        else {
-            newArr.push([elements[i]]);
-        }
-    }
-    return newArr;
-}
-
-const defaultConfig = [
-    {
-        type: 1,
-        name: "自定义",
-        config: {
-            growType: EGrowType.TopToBottom,
-            interval: 0.03,
-            bgType: "sys_opacity",
-            stringType: "sys_stringWave",
-            numberType: "sys_number",
-            imageType: "sys_opacity",
-            svgType: "sys_opacity",
-            canvasType: "sys_opacity",
-            videoType: "sys_opacity",
-            chartType: "sys_opacity",
-            anovSimpleMode: false,
-            parseLayer: 1,
-            leafNodeType: "sys_opacity"
-        }
-    },
-    {
-        type: 2,
-        name: "向下渐显",
-        des: "上到下-opacity",
-        growType: EGrowType.TopToBottom,
-        target: '',
-        config: {
-            interval: 0.03,
-            bgType: "sys_opacity",
-            stringType: "sys_opacity",
-            numberType: "sys_opacity",
-            imageType: "sys_opacity",
-            svgType: "sys_opacity",
-            canvasType: "sys_opacity",
-            videoType: "sys_opacity",
-            chartType: "sys_opacity",
-            anovSimpleMode: false,
-            parseLayer: 1,
-            leafNodeType: "sys_opacity"
-        }
-    },
-    {
-        type: 3,
-        name: "向下展开",
-        des: "上到下-height",
-        growType: EGrowType.TopToBottom,
-        target: '',
-        config: {
-            interval: 0.03,
-            bgType: "sys_height",
-            stringType: "sys_height",
-            numberType: "sys_height",
-            imageType: "sys_height",
-            svgType: "sys_height",
-            canvasType: "sys_opacity",
-            videoType: "sys_height",
-            chartType: "sys_height",
-            anovSimpleMode: false,
-            parseLayer: 1,
-            leafNodeType: "sys_height"
-        }
-    },
-    {
-        type: 4,
-        name: "向下放大",
-        des: "上到下-scale",
-        growType: EGrowType.TopToBottom,
-        target: '',
-        config: {
-            interval: 0.03,
-            bgType: "sys_scale",
-            stringType: "sys_scale",
-            numberType: "sys_scale",
-            imageType: "sys_scale",
-            svgType: "sys_scale",
-            canvasType: "sys_scale",
-            videoType: "sys_scale",
-            chartType: "sys_scale",
-            anovSimpleMode: false,
-            parseLayer: 1,
-            leafNodeType: "sys_scale"
-        }
-    },
-    {
-        type: 5,
-        name: "向右渐显",
-        des: "左到右-opacity",
-        growType: EGrowType.LeftToRight,
-        target: '',
-        config: {
-            interval: 0.03,
-            bgType: "sys_opacity",
-            stringType: "sys_opacity",
-            numberType: "sys_opacity",
-            imageType: "sys_opacity",
-            svgType: "sys_opacity",
-            canvasType: "sys_opacity",
-            videoType: "sys_opacity",
-            chartType: "sys_opacity",
-            anovSimpleMode: false,
-            parseLayer: 1,
-            leafNodeType: "sys_opacity"
-        }
-    },
-    {
-        type: 6,
-        name: "向右展开",
-        des: "左到右-width",
-        growType: EGrowType.LeftToRight,
-        target: '',
-        config: {
-            interval: 0.03,
-            bgType: "sys_width",
-            stringType: "sys_width",
-            numberType: "sys_width",
-            imageType: "sys_width",
-            svgType: "sys_width",
-            canvasType: "sys_width",
-            videoType: "sys_width",
-            chartType: "sys_width",
-            anovSimpleMode: false,
-            parseLayer: 1,
-            leafNodeType: "sys_width"
-        }
-    },
-    {
-        type: 7,
-        name: "向右放大",
-        des: "左到右-scale",
-        growType: EGrowType.LeftToRight,
-        target: '',
-        config: {
-            interval: 0.03,
-            bgType: "sys_scale",
-            stringType: "sys_scale",
-            numberType: "sys_scale",
-            imageType: "sys_scale",
-            svgType: "sys_scale",
-            canvasType: "sys_scale",
-            videoType: "sys_scale",
-            chartType: "sys_scale",
-            anovSimpleMode: false,
-            parseLayer: 1,
-            leafNodeType: "sys_scale"
-        }
-    },
-    {
-        type: 8,
-        name: "向右下渐显",
-        des: "左上到右下-opacity",
-        growType: EGrowType.LeftTopToRightBottom,
-        target: '',
-        config: {
-            interval: 0.03,
-            bgType: "sys_opacity",
-            stringType: "sys_opacity",
-            numberType: "sys_opacity",
-            imageType: "sys_opacity",
-            svgType: "sys_opacity",
-            canvasType: "sys_opacity",
-            videoType: "sys_opacity",
-            chartType: "sys_opacity",
-            anovSimpleMode: false,
-            parseLayer: 1,
-            leafNodeType: "sys_opacity"
-        }
-    },
-    {
-        type: 9,
-        name: "向右下放大",
-        des: "左上到右下-scale",
-        growType: EGrowType.LeftTopToRightBottom,
-        target: '',
-        config: {
-            interval: 0.03,
-            bgType: "sys_scale",
-            stringType: "sys_scale",
-            numberType: "sys_scale",
-            imageType: "sys_scale",
-            svgType: "sys_scale",
-            canvasType: "sys_scale",
-            videoType: "sys_scale",
-            chartType: "sys_scale",
-            anovSimpleMode: false,
-            parseLayer: 1,
-            leafNodeType: "sys_scale"
-        }
-    },
-    {
-        type: 10,
-        name: "向右下横向展开",
-        des: "左上到右下-width",
-        growType: EGrowType.LeftTopToRightBottom,
-        target: '',
-        config: {
-            interval: 0.03,
-            bgType: "sys_width",
-            stringType: "sys_width",
-            numberType: "sys_width",
-            imageType: "sys_width",
-            svgType: "sys_width",
-            canvasType: "sys_width",
-            videoType: "sys_width",
-            chartType: "sys_width",
-            anovSimpleMode: false,
-            parseLayer: 1,
-            leafNodeType: "sys_width"
-        }
-    },
-    {
-        type: 11,
-        name: "向右下纵向展开",
-        des: "左上到右下-height",
-        growType: EGrowType.LeftTopToRightBottom,
-        target: '',
-        config: {
-            interval: 0.03,
-            bgType: "sys_height",
-            stringType: "sys_height",
-            numberType: "sys_height",
-            imageType: "sys_height",
-            svgType: "sys_height",
-            canvasType: "sys_opacity",
-            videoType: "sys_height",
-            chartType: "sys_height",
-            anovSimpleMode: false,
-            parseLayer: 1,
-            leafNodeType: "sys_height"
-        }
-    }
-];
-
-function fomatterNum(num) {
-    if (typeof num === 'number') {
-      return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-    } else {
-      return ''
-    }
-  }
-
-  /**
-   * 解析target, 类名、id、数组(parts配置)
-   * @param {*} target 
-   * @returns 
-   */
-function parseTarget(target){
-  if(target.constructor == String) {
-    if(target.indexOf('#')> -1) return document.getElementById(target)
-    if(target.indexOf('.') > -1){
-      let doms = document.getElementsByClassName(target);
-      if(doms.length > 1){
-          console.warn(`类名为${target}的dom有多个，请确认target参数是否正确！`);
-      }
-      return doms[0]
-    }
-  }
-
-
-  return target
-}
-
-function rangRandom(min = 0, max = 1){
-  let num = Math.random() * (max - min) + min;
-  return num.toFixed(1) - 0
-}
-
 function _assertThisInitialized$1(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
 
 function _inheritsLoose$1(subClass, superClass) { subClass.prototype = Object.create(superClass.prototype); subClass.prototype.constructor = subClass; subClass.__proto__ = superClass; }
@@ -11596,139 +11033,336 @@ gsapWithCSS.registerPlugin(SplitText$1);
 gsapWithCSS.registerPlugin(CustomEase);
 gsapWithCSS.registerPlugin(DrawSVGPlugin);
 gsapWithCSS.SplitText = SplitText$1;
-var PageGrow = /** @class */ (function () {
-    function PageGrow(opt) {
-        // 设置默认参数
-        this.option = this._initOption(opt);
-        //配置解析规则
-        // const rule:IParserRule = RuleFactory.create({growType:<EGrowType>Number(opt.growType)})
-        if (this.option) {
-            var rule = RuleFactory.create(this.option);
-            //构建解析器
-            var parser = new HTMLPageParser(rule);
-            //开始解析
-            var els = parser.parse(this.option);
-            //对象列表按类型预定动画方案
-            this._animateController = new HTMLGrowAnimateController(els, this.option);
-        }
+/**
+ * 动画对象类型
+ */
+var EGrowElementType;
+(function (EGrowElementType) {
+    EGrowElementType[EGrowElementType["number"] = 0] = "number";
+    EGrowElementType[EGrowElementType["string"] = 1] = "string";
+    EGrowElementType[EGrowElementType["image"] = 2] = "image";
+    EGrowElementType[EGrowElementType["chart"] = 3] = "chart";
+    EGrowElementType[EGrowElementType["none"] = 4] = "none";
+    EGrowElementType[EGrowElementType["svg"] = 5] = "svg";
+    EGrowElementType[EGrowElementType["bg"] = 6] = "bg";
+    EGrowElementType[EGrowElementType["video"] = 7] = "video";
+    EGrowElementType[EGrowElementType["canvas"] = 8] = "canvas";
+    EGrowElementType[EGrowElementType["bgString"] = 9] = "bgString";
+    EGrowElementType[EGrowElementType["bgNumber"] = 10] = "bgNumber";
+    EGrowElementType[EGrowElementType["style"] = 11] = "style";
+    EGrowElementType[EGrowElementType["leafNode"] = 12] = "leafNode";
+    //...
+})(EGrowElementType || (EGrowElementType = {}));
+var EGrowElementTime;
+(function (EGrowElementTime) {
+    EGrowElementTime[EGrowElementTime["number"] = 0.3] = "number";
+    EGrowElementTime[EGrowElementTime["string"] = 0.3] = "string";
+    EGrowElementTime[EGrowElementTime["image"] = 0.2] = "image";
+    EGrowElementTime[EGrowElementTime["chart"] = 0.2] = "chart";
+    EGrowElementTime[EGrowElementTime["none"] = 0] = "none";
+    EGrowElementTime[EGrowElementTime["svg"] = 0.2] = "svg";
+    EGrowElementTime[EGrowElementTime["bg"] = 0.2] = "bg";
+    EGrowElementTime[EGrowElementTime["audio"] = 0.3] = "audio";
+    EGrowElementTime[EGrowElementTime["video"] = 0.2] = "video";
+    EGrowElementTime[EGrowElementTime["canvas"] = 0.2] = "canvas";
+    EGrowElementTime[EGrowElementTime["bgString"] = 0.3] = "bgString";
+    EGrowElementTime[EGrowElementTime["bgNumber"] = 0.3] = "bgNumber";
+    //...
+})(EGrowElementTime || (EGrowElementTime = {}));
+// 字符串动画类型
+var StringGrowType;
+(function (StringGrowType) {
+    StringGrowType[StringGrowType["wave"] = 1] = "wave";
+    StringGrowType[StringGrowType["print"] = 2] = "print";
+})(StringGrowType || (StringGrowType = {}));
+
+/**
+ * 进场动画方式
+ */
+var EGrowType;
+(function (EGrowType) {
+    EGrowType[EGrowType["LeftToRight"] = 1] = "LeftToRight";
+    EGrowType[EGrowType["TopToBottom"] = 2] = "TopToBottom";
+    EGrowType[EGrowType["LeftTopToRightBottom"] = 3] = "LeftTopToRightBottom";
+    EGrowType[EGrowType["RightToLeft"] = 4] = "RightToLeft";
+    EGrowType[EGrowType["BottomToTop"] = 5] = "BottomToTop";
+    EGrowType[EGrowType["CenterToAround"] = 6] = "CenterToAround";
+    // 待扩展..
+})(EGrowType || (EGrowType = {}));
+/**
+ * 解析规则工厂，通过参数配置生成解析规则
+ */
+var RuleFactory = /** @class */ (function () {
+    function RuleFactory() {
     }
-    /**
-     * 初始化参数
-     * @param opt
-     * @returns
-     */
-    PageGrow.prototype._initOption = function (opt) {
-        var defaultOpt = {
-            type: 2
-        }, option;
-        // if(!opt?.target)  return 
-        if (!opt || !(opt === null || opt === void 0 ? void 0 : opt.target)) {
-            console.warn('请传入动画对象!');
-            return;
+    RuleFactory.create = function (opt) {
+        var rule;
+        switch (opt.growType) {
+            case EGrowType.LeftTopToRightBottom:
+                rule = new LeftTopToRightBottomParserRule();
+                break;
+            case EGrowType.TopToBottom:
+                rule = new TopToBottomParserRule();
+                break;
+            case EGrowType.LeftToRight:
+                rule = new LeftToRightParserRule();
+                break;
+            case EGrowType.CenterToAround:
+                rule = new CenterToAroundParserRule();
+                break;
+            default:
+                rule = new LeftTopToRightBottomParserRule();
+                break;
         }
-        if (opt && !opt.type) {
-            option = __assign(__assign({}, opt), defaultOpt);
-        }
-        else {
-            option = __assign({}, opt);
-        }
-        var target = parseTarget(option === null || option === void 0 ? void 0 : option.target);
-        var config = this._parseOption(option);
-        return __assign(__assign({ target: target }, config), { tls: (option === null || option === void 0 ? void 0 : option.tls) || [], labels: (option === null || option === void 0 ? void 0 : option.labels) || {}, reversedCallback: option.reversedCallback, completeCallback: option.completeCallback });
+        return rule;
     };
-    /**
-     * 参数解析
-     * @param opt
-     * @returns
-     */
-    PageGrow.prototype._parseOption = function (opt) {
-        var config = {}, growType = 2;
-        defaultConfig.forEach(function (item) {
-            if (item.type == opt.type) {
-                config = item.config;
-                growType = item.growType || item.config.growType;
-            }
-        });
-        // if(opt.type == 1) return Object.assign({growType}, config, opt.config)
-        // if(opt.config?.interval) return {growType, ...config, interval: opt.config?.interval }
-        return Object.assign({ growType: growType }, config, opt.config);
-    };
-    PageGrow.prototype.enter = function () {
-        var tl = this.creatTl();
-        if (tl && (tl === null || tl === void 0 ? void 0 : tl.duration()) > 0) {
-            //执行进场
-            tl === null || tl === void 0 ? void 0 : tl.play();
-        }
-        else {
-            console.log("the timeline can not paly");
-        }
-    };
-    PageGrow.prototype.leave = function () {
-        var _a;
-        (_a = this._animateController) === null || _a === void 0 ? void 0 : _a.leave();
-    };
-    PageGrow.prototype.stop = function () {
-        var _a;
-        (_a = this._animateController) === null || _a === void 0 ? void 0 : _a.stop();
-    };
-    PageGrow.prototype.creatTl = function () {
-        var _a, _b;
-        var tl = (_a = this._animateController) === null || _a === void 0 ? void 0 : _a.creatTl();
-        if (tl && ((tl === null || tl === void 0 ? void 0 : tl.duration()) - 0 > 5)) {
-            tl === null || tl === void 0 ? void 0 : tl.duration(rangRandom(4, 5));
-        }
-        if (((_b = this.option) === null || _b === void 0 ? void 0 : _b.target) && this.option.target instanceof Array && this.option.target.length) {
-            if (tl && ((tl === null || tl === void 0 ? void 0 : tl.duration()) - 0 < 2)) {
-                tl === null || tl === void 0 ? void 0 : tl.duration(rangRandom(2, 3));
-            }
-        }
-        return tl;
-    };
-    PageGrow.prototype.addEffect = function (effectList) {
-        var _a;
-        (_a = this._animateController) === null || _a === void 0 ? void 0 : _a.addEffect(effectList);
-    };
-    return PageGrow;
+    return RuleFactory;
 }());
-var pageGrow = {
-    gsap: gsapWithCSS,
-    option: {},
-    tl: gsapWithCSS.timeline(),
-    els: [],
-    init: function (opt) {
-        var _a, _b, _c;
-        (_a = pageGrow.tl) === null || _a === void 0 ? void 0 : _a.eventCallback("onComplete", function () {
-            if (typeof opt.completeCallback == 'function') {
-                opt.completeCallback();
-            }
-        });
-        var pageGrowInstance = new PageGrow(__assign({}, opt));
-        pageGrow.option = pageGrowInstance.option;
-        pageGrow.gsap = (_b = pageGrowInstance._animateController) === null || _b === void 0 ? void 0 : _b.gsap;
-        var tl = pageGrowInstance.creatTl();
-        pageGrow.tl = tl;
-        pageGrow.els = (_c = pageGrowInstance._animateController) === null || _c === void 0 ? void 0 : _c._els;
-        return tl;
-    },
-    leave: function (reversedCallback, timeScale) {
-        var _a;
-        (_a = pageGrow.tl) === null || _a === void 0 ? void 0 : _a.eventCallback("onReverseComplete", function () {
-            if (typeof reversedCallback == 'function') {
-                reversedCallback();
-            }
-        });
-        if (isTl(pageGrow.tl))
-            pageGrow.tl.timeScale(timeScale || 2).reverse();
-    },
-    stop: function () {
-        if (isTl(pageGrow.tl))
-            pageGrow.tl.pause();
-    },
-    play: function () {
-        if (isTl(pageGrow.tl))
-            pageGrow.tl.play();
+/**
+ * 左上到右下解析规则
+ */
+var LeftTopToRightBottomParserRule = /** @class */ (function () {
+    function LeftTopToRightBottomParserRule() {
     }
-};
+    LeftTopToRightBottomParserRule.prototype.exec = function (elements) {
+        // lerftTopToRightBottom 进场排序    
+        elements = getOrderLeftTopToRightBottom(elements);
+    };
+    return LeftTopToRightBottomParserRule;
+}());
+/**
+ * 上到下解析规则
+ */
+var TopToBottomParserRule = /** @class */ (function () {
+    function TopToBottomParserRule() {
+    }
+    TopToBottomParserRule.prototype.exec = function (elements) {
+        //TopToBottom 进场排序
+        elements = getOrderTopToBottom(elements);
+    };
+    return TopToBottomParserRule;
+}());
+/**
+ * 左到右解析规则
+ */
+var LeftToRightParserRule = /** @class */ (function () {
+    function LeftToRightParserRule() {
+    }
+    LeftToRightParserRule.prototype.exec = function (elements) {
+        //LeftToRight 进场排序
+        elements = getOrderLeftToRight(elements);
+    };
+    return LeftToRightParserRule;
+}());
+/**
+ * 中间到周围解析规则
+ */
+var CenterToAroundParserRule = /** @class */ (function () {
+    function CenterToAroundParserRule() {
+    }
+    CenterToAroundParserRule.prototype.exec = function (elements) {
+        //CenterToAround 进场排序
+        elements.sort(function (a, b) { return a.distance - b.distance; });
+    };
+    return CenterToAroundParserRule;
+}());
+/**
+ * 从上到下——递归获取排序后的对象
+ * @param elements 需排序的元素对象
+ * @returns
+ */
+function getOrderTopToBottom(elements) {
+    var orderArr = orderTopToBottom(elements);
+    for (var i = 0; i < orderArr.length; i++) {
+        for (var j = 0; j < orderArr[i].length; j++) {
+            if (orderArr[i][j].children.length) {
+                orderArr[i][j].children = getOrderTopToBottom(orderArr[i][j].children);
+            }
+        }
+    }
+    return orderArr;
+}
+/**
+ * 从上到下——根据元素y值排序
+ * @param elements
+ * @returns 排序后得到二维数组
+ */
+function orderTopToBottom(elements) {
+    var t, n = elements.length;
+    // 按元素y值进行排序，得到一个一维数组
+    for (var i = 1; i < n; i++) {
+        for (var j = 0; j < n - i; j++) {
+            if (elements[j].y == elements[j + 1].y && elements[j].x > elements[j + 1].x) {
+                t = elements[j];
+                elements[j] = elements[j + 1];
+                elements[j + 1] = t;
+            }
+            else if (elements[j].y > elements[j + 1].y) {
+                t = elements[j];
+                elements[j] = elements[j + 1];
+                elements[j + 1] = t;
+            }
+        }
+    }
+    // 元素值相等，放入同一数组，最终得到二维数组
+    var newArr = [];
+    for (var i = 0; i < elements.length; i++) {
+        if (newArr.length) {
+            var hasFlag = false;
+            for (var m = 0; m < newArr.length; m++) {
+                if (newArr[m][0].y === elements[i].y) {
+                    newArr[m].push(elements[i]);
+                    hasFlag = true;
+                }
+            }
+            if (!hasFlag) {
+                newArr.push([elements[i]]);
+            }
+        }
+        else {
+            newArr.push([elements[i]]);
+        }
+    }
+    return newArr;
+}
+/**
+ * 从左到右——获取排序后的对象
+ * @param elements 需排序的元素对象
+ * @returns
+ */
+function getOrderLeftToRight(elements) {
+    var orderArr = orderLeftToRight(elements);
+    for (var i = 0; i < orderArr.length; i++) {
+        for (var j = 0; j < orderArr[i].length; j++) {
+            if (orderArr[i][j].children.length) {
+                orderArr[i][j].children = getOrderLeftToRight(orderArr[i][j].children);
+            }
+        }
+    }
+    return orderArr;
+}
+/**
+ * 从左到右——递归获取排序后的元素对象
+ * @param elements
+ * @returns
+ */
+function orderLeftToRight(elements) {
+    var t, n = elements.length;
+    for (var i = 1; i < n; i++) {
+        for (var j = 0; j < n - i; j++) {
+            if (elements[j].x == elements[j + 1].x && elements[j].y > elements[j + 1].y) {
+                t = elements[j];
+                elements[j] = elements[j + 1];
+                elements[j + 1] = t;
+            }
+            else if (elements[j].x > elements[j + 1].x) {
+                t = elements[j];
+                elements[j] = elements[j + 1];
+                elements[j + 1] = t;
+            }
+        }
+    }
+    var newArr = [];
+    for (var i = 0; i < elements.length; i++) {
+        if (newArr.length) {
+            var hasFlag = false;
+            for (var m = 0; m < newArr.length; m++) {
+                if (newArr[m][0].x === elements[i].x) {
+                    newArr[m].push(elements[i]);
+                    hasFlag = true;
+                }
+            }
+            if (!hasFlag) {
+                newArr.push([elements[i]]);
+            }
+        }
+        else {
+            newArr.push([elements[i]]);
+        }
+    }
+    return newArr;
+}
+function getOrderLeftTopToRightBottom(elements) {
+    var orderArr = orderLeftTopToRightBottom(elements);
+    for (var i = 0; i < orderArr.length; i++) {
+        for (var j = 0; j < orderArr[i].length; j++) {
+            if (orderArr[i][j].children.length) {
+                orderArr[i][j].children = getOrderLeftTopToRightBottom(orderArr[i][j].children);
+            }
+        }
+    }
+    return orderArr;
+}
+function orderLeftTopToRightBottom(elements) {
+    var t, n = elements.length;
+    for (var i = 1; i < n; i++) {
+        for (var j = 0; j < n - i; j++) {
+            if (elements[j].cornerDistance == elements[j + 1].cornerDistance && elements[j].y > elements[j + 1].y) {
+                t = elements[j];
+                elements[j] = elements[j + 1];
+                elements[j + 1] = t;
+            }
+            else if (elements[j].cornerDistance > elements[j + 1].cornerDistance) {
+                t = elements[j];
+                elements[j] = elements[j + 1];
+                elements[j + 1] = t;
+            }
+        }
+    }
+    var newArr = [];
+    for (var i = 0; i < elements.length; i++) {
+        if (newArr.length) {
+            var hasFlag = false;
+            for (var m = 0; m < newArr.length; m++) {
+                if (newArr[m][0].cornerDistance === elements[i].cornerDistance) {
+                    newArr[m].push(elements[i]);
+                    hasFlag = true;
+                }
+            }
+            if (!hasFlag) {
+                newArr.push([elements[i]]);
+            }
+        }
+        else {
+            newArr.push([elements[i]]);
+        }
+    }
+    return newArr;
+}
+
+function fomatterNum(num) {
+    if (typeof num === 'number') {
+      return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+    } else {
+      return ''
+    }
+  }
+
+  /**
+   * 解析target, 类名、id、数组(parts配置)
+   * @param {*} target 
+   * @returns 
+   */
+function parseTarget(target){
+  if(target.constructor == String) {
+    if(target.indexOf('#')> -1) return document.getElementById(target)
+    if(target.indexOf('.') > -1){
+      let doms = document.getElementsByClassName(target);
+      if(doms.length > 1){
+          console.warn(`类名为${target}的dom有多个，请确认target参数是否正确！`);
+      }
+      return doms[0]
+    }
+  }
+
+
+  return target
+}
+
+function rangRandom(min = 0, max = 1){
+  let num = Math.random() * (max - min) + min;
+  return num.toFixed(1) - 0
+}
 
 /**
  * 封装gsap
@@ -11781,7 +11415,7 @@ var HTMLGrowAnimateController = /** @class */ (function () {
             childTl.addLabel('startChildTl');
             //判断该元素是否有自定义动画线
             var customTl = this_1._elementHasCustomTl(els[i]);
-            if (customTl.duration() && customTl instanceof gsapWithCSS.core.Animation) {
+            if (isTl(customTl)) {
                 parentTl.add(customTl, 'start+=' + startTime);
             }
             else {
@@ -12184,7 +11818,6 @@ var HTMLPageParser = /** @class */ (function (_super) {
     __extends(HTMLPageParser, _super);
     function HTMLPageParser(rule) {
         var _this = _super.call(this) || this;
-        _this._els = Array();
         _this._rule = rule;
         _this._hasMatchEle = false;
         return _this;
@@ -12479,45 +12112,49 @@ var HTMLPageParser = /** @class */ (function (_super) {
     HTMLPageParser.prototype.getPartElement = function (part, parentX, parentY) {
         if (parentX === void 0) { parentX = 0; }
         if (parentY === void 0) { parentY = 0; }
-        var x = part.style.left + parentX, y = part.style.top + parentY, centerX = x + part.style.width / 2, centerY = y + part.style.height / 2;
+        var x = Number(part.style.left + parentX), y = Number(part.style.top + parentY), centerX = Number(x + Number(part.style.width) / 2), centerY = Number(y + Number(part.style.height) / 2);
         var el = document.getElementById(part.id);
-        return {
-            el: el,
-            tagName: el === null || el === void 0 ? void 0 : el.tagName,
-            x: x,
-            y: y,
-            w: part.style.width,
-            h: part.style.height,
-            centerX: centerX,
-            centerY: centerY,
-            index: 0,
-            distance: Math.sqrt(Math.pow(centerX - window.innerWidth / 2, 2) + Math.pow(centerY - window.innerHeight / 2, 2)),
-            cornerDistance: Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2)),
-            children: [],
-            startTime: 0,
-            endTime: 0,
-            duration: 0,
-            tl: this._getCompTl(part.id)
-        };
+        if (el) {
+            return {
+                el: el,
+                tagName: el === null || el === void 0 ? void 0 : el.tagName,
+                x: x,
+                y: y,
+                w: Number(part.style.width),
+                h: Number(part.style.height),
+                centerX: centerX,
+                centerY: centerY,
+                index: 0,
+                distance: Math.sqrt(Math.pow(centerX - window.innerWidth / 2, 2) + Math.pow(centerY - window.innerHeight / 2, 2)),
+                cornerDistance: Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2)),
+                children: [],
+                startTime: 0,
+                endTime: 0,
+                duration: 0,
+                tl: this._getCompTl(part.id)
+            };
+        }
     };
     HTMLPageParser.prototype._parsePartsConfig = function (parts, parentX, parentY) {
         var _a;
         var els = [];
         for (var i = 0; i < (parts === null || parts === void 0 ? void 0 : parts.length); i++) {
             var part = parts[i], child = [];
-            var el = this.getPartElement(part, parentX, parentY);
-            els.push(el);
-            if (((_a = part.children) === null || _a === void 0 ? void 0 : _a.length) > 0) {
-                child = this._parsePartsConfig(part.children, el.x, el.y);
-            }
-            if (child.length) {
-                els.push.apply(els, child);
+            if (part.id) {
+                var el = this.getPartElement(part, parentX, parentY);
+                els.push(el);
+                if (((_a = part.children) === null || _a === void 0 ? void 0 : _a.length) > 0) {
+                    child = this._parsePartsConfig(part.children, el.x, el.y);
+                }
+                if (child.length) {
+                    els.push.apply(els, child);
+                }
             }
         }
         return els;
     };
     HTMLPageParser.prototype._getCompTl = function (id) {
-        var compTl = new GrowTimeLine();
+        var compTl;
         this._option.tls.length && this._option.tls.forEach(function (item) {
             // let key = Object.keys(item)[0]
             if (item.id == id) {
@@ -12526,9 +12163,372 @@ var HTMLPageParser = /** @class */ (function (_super) {
         });
         return compTl;
     };
-    HTMLPageParser.prototype.initElStyle = function () {
-    };
     return HTMLPageParser;
 }(AbstractParser));
 
-export { AbstractParser, CenterToAroundParserRule, EGrowType, HTMLPageParser, LeftToRightParserRule, LeftTopToRightBottomParserRule, RuleFactory, TopToBottomParserRule, gsapWithCSS as gsap, pageGrow };
+const defaultConfig = [
+    {
+        type: 1,
+        name: "自定义",
+        config: {
+            growType: EGrowType.TopToBottom,
+            interval: 0.03,
+            bgType: "sys_opacity",
+            stringType: "sys_stringWave",
+            numberType: "sys_number",
+            imageType: "sys_opacity",
+            svgType: "sys_opacity",
+            canvasType: "sys_opacity",
+            videoType: "sys_opacity",
+            chartType: "sys_opacity",
+            anovSimpleMode: false,
+            parseLayer: 1,
+            leafNodeType: "sys_opacity"
+        }
+    },
+    {
+        type: 2,
+        name: "向下渐显",
+        des: "上到下-opacity",
+        growType: EGrowType.TopToBottom,
+        target: '',
+        config: {
+            interval: 0.03,
+            bgType: "sys_opacity",
+            stringType: "sys_opacity",
+            numberType: "sys_opacity",
+            imageType: "sys_opacity",
+            svgType: "sys_opacity",
+            canvasType: "sys_opacity",
+            videoType: "sys_opacity",
+            chartType: "sys_opacity",
+            anovSimpleMode: false,
+            parseLayer: 1,
+            leafNodeType: "sys_opacity"
+        }
+    },
+    {
+        type: 3,
+        name: "向下展开",
+        des: "上到下-height",
+        growType: EGrowType.TopToBottom,
+        target: '',
+        config: {
+            interval: 0.03,
+            bgType: "sys_height",
+            stringType: "sys_height",
+            numberType: "sys_height",
+            imageType: "sys_height",
+            svgType: "sys_height",
+            canvasType: "sys_opacity",
+            videoType: "sys_height",
+            chartType: "sys_height",
+            anovSimpleMode: false,
+            parseLayer: 1,
+            leafNodeType: "sys_height"
+        }
+    },
+    {
+        type: 4,
+        name: "向下放大",
+        des: "上到下-scale",
+        growType: EGrowType.TopToBottom,
+        target: '',
+        config: {
+            interval: 0.03,
+            bgType: "sys_scale",
+            stringType: "sys_scale",
+            numberType: "sys_scale",
+            imageType: "sys_scale",
+            svgType: "sys_scale",
+            canvasType: "sys_scale",
+            videoType: "sys_scale",
+            chartType: "sys_scale",
+            anovSimpleMode: false,
+            parseLayer: 1,
+            leafNodeType: "sys_scale"
+        }
+    },
+    {
+        type: 5,
+        name: "向右渐显",
+        des: "左到右-opacity",
+        growType: EGrowType.LeftToRight,
+        target: '',
+        config: {
+            interval: 0.03,
+            bgType: "sys_opacity",
+            stringType: "sys_opacity",
+            numberType: "sys_opacity",
+            imageType: "sys_opacity",
+            svgType: "sys_opacity",
+            canvasType: "sys_opacity",
+            videoType: "sys_opacity",
+            chartType: "sys_opacity",
+            anovSimpleMode: false,
+            parseLayer: 1,
+            leafNodeType: "sys_opacity"
+        }
+    },
+    {
+        type: 6,
+        name: "向右展开",
+        des: "左到右-width",
+        growType: EGrowType.LeftToRight,
+        target: '',
+        config: {
+            interval: 0.03,
+            bgType: "sys_width",
+            stringType: "sys_width",
+            numberType: "sys_width",
+            imageType: "sys_width",
+            svgType: "sys_width",
+            canvasType: "sys_width",
+            videoType: "sys_width",
+            chartType: "sys_width",
+            anovSimpleMode: false,
+            parseLayer: 1,
+            leafNodeType: "sys_width"
+        }
+    },
+    {
+        type: 7,
+        name: "向右放大",
+        des: "左到右-scale",
+        growType: EGrowType.LeftToRight,
+        target: '',
+        config: {
+            interval: 0.03,
+            bgType: "sys_scale",
+            stringType: "sys_scale",
+            numberType: "sys_scale",
+            imageType: "sys_scale",
+            svgType: "sys_scale",
+            canvasType: "sys_scale",
+            videoType: "sys_scale",
+            chartType: "sys_scale",
+            anovSimpleMode: false,
+            parseLayer: 1,
+            leafNodeType: "sys_scale"
+        }
+    },
+    {
+        type: 8,
+        name: "向右下渐显",
+        des: "左上到右下-opacity",
+        growType: EGrowType.LeftTopToRightBottom,
+        target: '',
+        config: {
+            interval: 0.03,
+            bgType: "sys_opacity",
+            stringType: "sys_opacity",
+            numberType: "sys_opacity",
+            imageType: "sys_opacity",
+            svgType: "sys_opacity",
+            canvasType: "sys_opacity",
+            videoType: "sys_opacity",
+            chartType: "sys_opacity",
+            anovSimpleMode: false,
+            parseLayer: 1,
+            leafNodeType: "sys_opacity"
+        }
+    },
+    {
+        type: 9,
+        name: "向右下放大",
+        des: "左上到右下-scale",
+        growType: EGrowType.LeftTopToRightBottom,
+        target: '',
+        config: {
+            interval: 0.03,
+            bgType: "sys_scale",
+            stringType: "sys_scale",
+            numberType: "sys_scale",
+            imageType: "sys_scale",
+            svgType: "sys_scale",
+            canvasType: "sys_scale",
+            videoType: "sys_scale",
+            chartType: "sys_scale",
+            anovSimpleMode: false,
+            parseLayer: 1,
+            leafNodeType: "sys_scale"
+        }
+    },
+    {
+        type: 10,
+        name: "向右下横向展开",
+        des: "左上到右下-width",
+        growType: EGrowType.LeftTopToRightBottom,
+        target: '',
+        config: {
+            interval: 0.03,
+            bgType: "sys_width",
+            stringType: "sys_width",
+            numberType: "sys_width",
+            imageType: "sys_width",
+            svgType: "sys_width",
+            canvasType: "sys_width",
+            videoType: "sys_width",
+            chartType: "sys_width",
+            anovSimpleMode: false,
+            parseLayer: 1,
+            leafNodeType: "sys_width"
+        }
+    },
+    {
+        type: 11,
+        name: "向右下纵向展开",
+        des: "左上到右下-height",
+        growType: EGrowType.LeftTopToRightBottom,
+        target: '',
+        config: {
+            interval: 0.03,
+            bgType: "sys_height",
+            stringType: "sys_height",
+            numberType: "sys_height",
+            imageType: "sys_height",
+            svgType: "sys_height",
+            canvasType: "sys_opacity",
+            videoType: "sys_height",
+            chartType: "sys_height",
+            anovSimpleMode: false,
+            parseLayer: 1,
+            leafNodeType: "sys_height"
+        }
+    }
+];
+
+var PageGrow = /** @class */ (function () {
+    function PageGrow(opt) {
+        // 设置默认参数
+        this.option = this._initOption(opt);
+        //配置解析规则
+        // const rule:IParserRule = RuleFactory.create({growType:<EGrowType>Number(opt.growType)})
+        var rule = RuleFactory.create(this.option);
+        //构建解析器
+        var parser = new HTMLPageParser(rule);
+        //开始解析
+        var els = parser.parse(this.option);
+        //对象列表按类型预定动画方案
+        this._animateController = new HTMLGrowAnimateController(els, this.option);
+    }
+    /**
+     * 初始化参数
+     * @param opt
+     * @returns
+     */
+    PageGrow.prototype._initOption = function (opt) {
+        var defaultOpt = {
+            type: 2
+        }, option;
+        if (opt && !opt.type) {
+            option = __assign(__assign({}, opt), defaultOpt);
+        }
+        else {
+            option = __assign({}, opt);
+        }
+        var target = parseTarget(option === null || option === void 0 ? void 0 : option.target);
+        var config = this._parseOption(option);
+        return __assign(__assign({ target: target }, config), { tls: (option === null || option === void 0 ? void 0 : option.tls) || (Array), labels: (option === null || option === void 0 ? void 0 : option.labels) || {}, reversedCallback: option.reversedCallback, completeCallback: option.completeCallback });
+    };
+    /**
+     * 参数解析
+     * @param opt
+     * @returns
+     */
+    PageGrow.prototype._parseOption = function (opt) {
+        var config = {}, growType = 2;
+        defaultConfig.forEach(function (item) {
+            if (item.type == opt.type) {
+                config = item.config;
+                growType = item.growType || item.config.growType;
+            }
+        });
+        // if(opt.type == 1) return Object.assign({growType}, config, opt.config)
+        // if(opt.config?.interval) return {growType, ...config, interval: opt.config?.interval }
+        return Object.assign({ growType: growType }, config, opt.config);
+    };
+    PageGrow.prototype.enter = function () {
+        var tl = this.creatTl();
+        if (tl && (tl === null || tl === void 0 ? void 0 : tl.duration()) > 0) {
+            //执行进场
+            tl === null || tl === void 0 ? void 0 : tl.play();
+        }
+        else {
+            console.log("the timeline can not paly");
+        }
+    };
+    PageGrow.prototype.leave = function () {
+        var _a;
+        (_a = this._animateController) === null || _a === void 0 ? void 0 : _a.leave();
+    };
+    PageGrow.prototype.stop = function () {
+        var _a;
+        (_a = this._animateController) === null || _a === void 0 ? void 0 : _a.stop();
+    };
+    PageGrow.prototype.creatTl = function () {
+        var _a;
+        var tl = (_a = this._animateController) === null || _a === void 0 ? void 0 : _a.creatTl();
+        if (tl && ((tl === null || tl === void 0 ? void 0 : tl.duration()) - 0 > 5)) {
+            tl === null || tl === void 0 ? void 0 : tl.duration(rangRandom(4, 5));
+        }
+        if (this.option.target && this.option.target instanceof Array && this.option.target.length) {
+            if (tl && ((tl === null || tl === void 0 ? void 0 : tl.duration()) - 0 < 2)) {
+                tl === null || tl === void 0 ? void 0 : tl.duration(rangRandom(2, 3));
+            }
+        }
+        return tl;
+    };
+    PageGrow.prototype.addEffect = function (effectList) {
+        var _a;
+        (_a = this._animateController) === null || _a === void 0 ? void 0 : _a.addEffect(effectList);
+    };
+    return PageGrow;
+}());
+var pageGrow = {
+    gsap: gsapWithCSS,
+    option: {},
+    config: defaultConfig,
+    tl: gsapWithCSS.timeline(),
+    els: [],
+    init: function (opt) {
+        var _a;
+        if (!opt.target) {
+            console.warn('请传入动画对象!');
+            return;
+        }
+        else {
+            (_a = pageGrow.tl) === null || _a === void 0 ? void 0 : _a.eventCallback("onComplete", function () {
+                if (typeof opt.completeCallback == 'function') {
+                    opt.completeCallback();
+                }
+            });
+            var pageGrowInstance = new PageGrow(__assign({}, opt));
+            pageGrow.option = pageGrowInstance.option;
+            var tl = pageGrowInstance.creatTl();
+            pageGrow.tl = tl;
+            pageGrow.els = pageGrowInstance._animateController._els;
+            return tl;
+        }
+    },
+    leave: function (reversedCallback, timeScale) {
+        var _a;
+        (_a = pageGrow.tl) === null || _a === void 0 ? void 0 : _a.eventCallback("onReverseComplete", function () {
+            if (typeof reversedCallback == 'function') {
+                reversedCallback();
+            }
+        });
+        if (isTl(pageGrow.tl))
+            pageGrow.tl.timeScale(timeScale || 2).reverse();
+    },
+    stop: function () {
+        if (isTl(pageGrow.tl))
+            pageGrow.tl.pause();
+    },
+    play: function () {
+        if (isTl(pageGrow.tl))
+            pageGrow.tl.play();
+    }
+};
+
+export { AbstractParser, CenterToAroundParserRule, EGrowType, HTMLPageParser, LeftToRightParserRule, LeftTopToRightBottomParserRule, RuleFactory, TopToBottomParserRule, pageGrow };

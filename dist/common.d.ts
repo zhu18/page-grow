@@ -1,4 +1,6 @@
 import { GrowTween, GrowTimeLine } from "./animate";
+import { gsap } from 'gsap';
+export { gsap };
 /**
  * 动画对象类型
  */
@@ -87,7 +89,7 @@ export declare interface IGrowHTMLElement extends IGrowElement {
     /**
      * 原始对象<覆盖基类>
      */
-    el: HTMLElement | null;
+    el: HTMLElement;
     children: Array<Array<IGrowHTMLElement>>;
     /**
       * 动画时长

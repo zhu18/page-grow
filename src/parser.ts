@@ -31,7 +31,7 @@ export class HTMLPageParser extends AbstractParser{
     }    
 
     private _rule:IParserRule
-    private _els:IGrowHTMLElement[]=Array<IGrowHTMLElement>()
+    private _els!:Array<IGrowHTMLElement>
     private _option!: PageGrowOption
     private _parseLayer!: number
     private _hasMatchEle: boolean
@@ -39,7 +39,7 @@ export class HTMLPageParser extends AbstractParser{
     public get rule():IParserRule{
         return this._rule
     }
-    public get elements():IGrowHTMLElement[]{
+    public get elements():Array<IGrowHTMLElement>{
         return this._els
     }
 
@@ -118,7 +118,7 @@ export class HTMLPageParser extends AbstractParser{
      * @param element 传入的动画元素
      * @returns 
      */
-    private _parseHTMLElementRecurve(element: HTMLElement, layer: number): Array<any> {
+    private _parseHTMLElementRecurve(element: HTMLElement|Element, layer: number): Array<any> {
         let element_info = [];
         if(element instanceof HTMLElement){
             let element_child = element.children,
@@ -136,8 +136,8 @@ export class HTMLPageParser extends AbstractParser{
                 
                 const x = element_child[i].getBoundingClientRect().left - element_x;
                 const y = element_child[i].getBoundingClientRect().top - element_y;
-                const w = element_child[i].offsetWidth??element_child[i].scrollWidth;
-                const h = element_child[i].offsetHeight??element_child[i].scrollHeight;
+                const w = (element_child[i] as HTMLDivElement).offsetWidth??element_child[i].scrollWidth;
+                const h = (element_child[i] as HTMLDivElement).offsetHeight??element_child[i].scrollHeight;
                 const centerX = x + w / 2;
                 const centerY = y + h /2;
                 let el = this._getElement(element_child[i], x, y, centerX, centerY, layer)
@@ -342,51 +342,56 @@ export class HTMLPageParser extends AbstractParser{
         return false
     }
 
-    private getPartElement(part: any, parentX: number = 0, parentY: number = 0): IGrowHTMLElement{
-        const  x = part.style.left + parentX, 
-               y = part.style.top + parentY,
-               centerX = x + part.style.width / 2, 
-               centerY = y + part.style.height / 2
-        
+    private getPartElement(part: any, parentX: number = 0, parentY: number = 0): any{
+        const  x: number = Number(part.style.left + parentX), 
+               y: number = Number(part.style.top + parentY),
+               centerX: number = Number(x + Number(part.style.width) / 2), 
+               centerY: number = Number(y + Number(part.style.height) / 2)
         let el = document.getElementById(part.id)
-        return {
-            el,
-            tagName: el?.tagName,
-            x,
-            y,
-            w: part.style.width,
-            h: part.style.height,
-            centerX,
-            centerY,
-            index: 0,
-            distance:  Math.sqrt(Math.pow(centerX - window.innerWidth / 2, 2) + Math.pow(centerY - window.innerHeight / 2, 2)),
-            cornerDistance:  Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2)),
-            children: [],
-            startTime: 0, 
-            endTime: 0,
-            duration: 0,
-            tl: this._getCompTl(part.id)
+        if(el){
+            return {
+                el,
+                tagName: el?.tagName,
+                x,
+                y,
+                w: Number(part.style.width),
+                h: Number(part.style.height),
+                centerX,
+                centerY,
+                index: 0,
+                distance:  Math.sqrt(Math.pow(centerX - window.innerWidth / 2, 2) + Math.pow(centerY - window.innerHeight / 2, 2)),
+                cornerDistance:  Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2)),
+                children: [],
+                startTime: 0, 
+                endTime: 0,
+                duration: 0,
+                tl: this._getCompTl(part.id)
+            }
         }
+        
     }
 
     private _parsePartsConfig(parts: any, parentX?: number, parentY?: number): Array<any>{
         let els = []
         for (let i = 0; i < parts?.length; i++) {
             let part = parts[i],  child = []
-            let el = this.getPartElement(part, parentX, parentY)
-            els.push(el)
-            if(part.children?.length > 0){
-                child = this._parsePartsConfig(part.children, el.x, el.y)
+            if(part.id){
+                let el = this.getPartElement(part, parentX, parentY)
+                els.push(el)
+                if(part.children?.length > 0){
+                    child = this._parsePartsConfig(part.children, el.x, el.y)
+                }
+                if(child.length){
+                    els.push(...child)
+                }
             }
-            if(child.length){
-                els.push(...child)
-            }
+            
         }
         return els
     }
 
     private _getCompTl(id: string): any{
-        let compTl = new GrowTimeLine()
+        let compTl
         this._option.tls.length && this._option.tls.forEach(item => {
             // let key = Object.keys(item)[0]
             if( item.id == id) {
@@ -396,9 +401,6 @@ export class HTMLPageParser extends AbstractParser{
         return compTl
     }
 
-    private initElStyle(){
-
-    }
 
 }
 

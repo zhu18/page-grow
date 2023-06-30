@@ -1,5 +1,5 @@
-import { IGrowHTMLElement } from "./common";
-import { PageGrowOption, EffectObj, gsap } from './engine';
+import { IGrowHTMLElement, gsap } from "./common";
+import { PageGrowOption, EffectObj } from './engine';
 /**
  * 动画基础规则接口
  */

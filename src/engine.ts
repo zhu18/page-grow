@@ -1,29 +1,13 @@
-import type {IDisposable, IGrowElement, IGrowHTMLElement} from './common'
+import type {IGrowHTMLElement} from './common'
+import  {gsap} from './common'
 import {IParserRule, RuleFactory, EGrowType}  from './rule'
 import  {HTMLPageParser}  from './parser'
 import  {HTMLGrowAnimateController, GrowTimeLine, isTl}  from './animate'
 import {defaultConfig} from './config.js'
 import {parseTarget, rangRandom} from './utils/tool'
-import {gsap} from 'gsap'
-import { Draggable } from 'gsap/Draggable'
-import SplitText from "./utils/SplitText.min";
-import ScrambleTextPlugin from './utils/ScrambleTextPlugin3.min'
-import DrawSVGPlugin from './utils/DrawSVGPlugin3.min'
-import { CustomEase } from "gsap/CustomEase";
 
-
-gsap.registerPlugin(Draggable)
-gsap.registerPlugin(ScrambleTextPlugin)
-gsap.registerPlugin(SplitText)
-gsap.registerPlugin(CustomEase)
-gsap.registerPlugin(DrawSVGPlugin)
-
-
-
-gsap.SplitText = SplitText
-export {gsap}
 export interface PageGrowOption{
-    target: string | HTMLElement | Array<object> | null, // 动画对象,支持类名、id、dom对象、配置文件(类似于dev parts.js)
+    target: string | HTMLElement | Array<object>, // 动画对象,支持类名、id、dom对象、配置文件(类似于dev parts.js)
     growType:EGrowType, //动画类型
     interval: number, // 块之间动画间隔
     stringType: string, //文本动画类型
@@ -38,7 +22,7 @@ export interface PageGrowOption{
     customTl: Array<CustomTl>, //自定义动画
     anovSimpleMode: boolean, //是否基于anov使用简单模式
     parseLayer: number, //解析dom层级
-    tls: Array<object>, //传入子组件动画线及动画对象
+    tls: Array<{id: String, tl: gsap.core.Animation}>, //传入子组件动画线及动画对象
     parts?: [], //传入json配置项
     labels?: {},
     reversedCallback: Callback,
@@ -47,10 +31,10 @@ export interface PageGrowOption{
 
 interface initOption{
     type: number,
-    target?: string | HTMLElement | Array<object> | null,
+    target: string | HTMLElement | Array<object>,
     config?: object,
     labels?: object,
-    tls?: Array<object>,
+    tls?: Array<{id: String, tl: gsap.core.Animation}>,
     reversedCallback: Callback,
     completeCallback: Callback,
 
@@ -76,8 +60,8 @@ export interface EffectObj{
 
 class PageGrow{
 
-    public option?:PageGrowOption | undefined
-    public _animateController?:HTMLGrowAnimateController
+    public option:PageGrowOption
+    public _animateController:HTMLGrowAnimateController
 
     constructor(opt:initOption){
         
@@ -85,15 +69,13 @@ class PageGrow{
         this.option = this._initOption(opt)
         //配置解析规则
         // const rule:IParserRule = RuleFactory.create({growType:<EGrowType>Number(opt.growType)})
-        if(this.option){
-            const rule:IParserRule = RuleFactory.create(this.option)
-            //构建解析器
-            const parser = new HTMLPageParser(rule)
-            //开始解析
-            const els:Array<IGrowHTMLElement> = parser.parse(this.option)
-            //对象列表按类型预定动画方案
-            this._animateController=new HTMLGrowAnimateController(els, this.option)
-        }
+        const rule:IParserRule = RuleFactory.create(this.option)
+        //构建解析器
+        const parser = new HTMLPageParser(rule)
+        //开始解析
+        const els:Array<IGrowHTMLElement> = parser.parse(this.option)
+        //对象列表按类型预定动画方案
+        this._animateController=new HTMLGrowAnimateController(els, this.option)
     }
 
     /**
@@ -105,11 +87,7 @@ class PageGrow{
         let defaultOpt = {
             type: 2
         },option: initOption
-        // if(!opt?.target)  return 
-        if(!opt || !opt?.target) {
-            console.warn('请传入动画对象!')
-            return 
-        }
+        
         if(opt && !opt.type) {
             option = {...opt, ...defaultOpt}
         }else {
@@ -120,7 +98,7 @@ class PageGrow{
         return {
             target,
             ...config,
-            tls: option?.tls || [],
+            tls: option?.tls || Array<{id: String, tl: gsap.core.Animation}>,
             labels: option?.labels || {},
             reversedCallback: option.reversedCallback,
             completeCallback: option.completeCallback,
@@ -174,7 +152,7 @@ class PageGrow{
         if(tl && (tl?.duration() - 0 > 5 ) ){
             tl?.duration(rangRandom(4, 5))
         }
-        if(this.option?.target && this.option.target instanceof Array && this.option.target.length){
+        if(this.option.target && this.option.target instanceof Array && this.option.target.length){
             if(tl && (tl?.duration() - 0 < 2 ) ){
                 tl?.duration(rangRandom(2, 3))
             }
@@ -193,20 +171,25 @@ const pageGrow = {
     option: {},
     config: defaultConfig,
     tl: gsap.timeline(),
-    els: [],
+    els: [] as Array<IGrowHTMLElement>,
     init(opt:initOption){
-        pageGrow.tl?.eventCallback("onComplete", () => {
-            if(typeof opt.completeCallback == 'function'){
-                opt.completeCallback()
-            }
-        })
-        let pageGrowInstance = new PageGrow({ ...opt })
-        pageGrow.option = pageGrowInstance.option!
-        pageGrow.gsap = pageGrowInstance._animateController?.gsap
-        let tl = pageGrowInstance.creatTl()
-        pageGrow.tl = tl!
-        pageGrow.els = pageGrowInstance._animateController?._els
-        return tl
+        if(!opt.target) {
+            console.warn('请传入动画对象!')
+            return 
+        }else {
+            pageGrow.tl?.eventCallback("onComplete", () => {
+                if(typeof opt.completeCallback == 'function'){
+                    opt.completeCallback()
+                }
+            })
+            let pageGrowInstance = new PageGrow({ ...opt })
+            pageGrow.option = pageGrowInstance.option!
+            let tl = pageGrowInstance.creatTl()
+            pageGrow.tl = tl!
+            pageGrow.els = pageGrowInstance._animateController._els
+            return tl
+        }
+        
     },
     leave(reversedCallback: Function, timeScale:number){
         pageGrow.tl?.eventCallback("onReverseComplete", () => {

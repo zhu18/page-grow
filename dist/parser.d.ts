@@ -26,7 +26,7 @@ export declare class HTMLPageParser extends AbstractParser {
     private _parseLayer;
     private _hasMatchEle;
     get rule(): IParserRule;
-    get elements(): IGrowHTMLElement[];
+    get elements(): Array<IGrowHTMLElement>;
     dispose(): void;
     /**
      * 解析HTML页面全部元素, 获取IGrowHTMLElement数组
@@ -71,5 +71,4 @@ export declare class HTMLPageParser extends AbstractParser {
     private getPartElement;
     private _parsePartsConfig;
     private _getCompTl;
-    private initElStyle;
 }

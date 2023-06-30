@@ -1,4 +1,23 @@
 import { GrowTween, GrowTimeLine } from "./animate"
+import {gsap} from 'gsap'
+import { Draggable } from 'gsap/Draggable'
+import SplitText from "./utils/SplitText.min";
+import ScrambleTextPlugin from './utils/ScrambleTextPlugin3.min'
+import DrawSVGPlugin from './utils/DrawSVGPlugin3.min'
+import { CustomEase } from "gsap/CustomEase";
+
+
+gsap.registerPlugin(Draggable)
+gsap.registerPlugin(ScrambleTextPlugin)
+gsap.registerPlugin(SplitText)
+gsap.registerPlugin(CustomEase)
+gsap.registerPlugin(DrawSVGPlugin)
+
+
+
+gsap.SplitText = SplitText
+export {gsap}
+
 
 /**
  * 动画对象类型
@@ -59,7 +78,7 @@ export declare interface IGrowElement{
     /**
      * 原始对象
      */
-    el:HTMLElement|null,
+    el:HTMLElement | null,
     /**
      * 动画开始时间
      */
@@ -99,7 +118,7 @@ export declare interface IGrowHTMLElement extends IGrowElement{
     /**
      * 原始对象<覆盖基类>
      */
-    el:HTMLElement|null
+    el:HTMLElement,
     children: Array<Array<IGrowHTMLElement>>,
     /**
       * 动画时长
