@@ -1,6 +1,6 @@
 import { GrowTween, GrowTimeLine } from "./animate";
-import { gsap } from 'gsap';
-export { gsap };
+declare const pageGrowGsap: typeof globalThis.gsap;
+export { pageGrowGsap };
 /**
  * 动画对象类型
  */
@@ -22,13 +22,13 @@ export declare enum EGrowElementType {
 export declare enum EGrowElementTime {
     number = 0.3,
     string = 0.3,
-    image = 0.2,
-    chart = 0.2,
+    image = 0.6,
+    chart = 0.6,
     none = 0,
     svg = 0.2,
-    bg = 0.2,
+    bg = 0.6,
     audio = 0.3,
-    video = 0.2,
+    video = 0.5,
     canvas = 0.2,
     bgString = 0.3,
     bgNumber = 0.3
@@ -56,7 +56,7 @@ export declare interface IGrowElement {
     /**
      * 动画开始时间
      */
-    startTime: number;
+    startTime: any;
     /**
      * 动画结束时间
      */
@@ -72,7 +72,7 @@ export declare interface IGrowElement {
     /**
      * 元素原始样式()目前包含opacity, scaleX, scaleY
      */
-    originalStyle?: object;
+    originalStyle?: any;
 }
 /**
  * HTML动画对象接口

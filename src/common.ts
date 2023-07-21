@@ -16,7 +16,9 @@ gsap.registerPlugin(DrawSVGPlugin)
 
 
 gsap.SplitText = SplitText
-export {gsap}
+
+const pageGrowGsap = gsap
+export {pageGrowGsap}
 
 
 /**
@@ -43,13 +45,13 @@ export  enum EGrowElementType{
 export  enum EGrowElementTime{
     number=0.3,
     string=0.3,    
-    image=0.2,
-    chart=0.2,
+    image=0.6,
+    chart=0.6,
     none=0,
     svg=0.2,
-    bg=0.2,
+    bg=0.6,
     audio=0.3,
-    video=0.2,
+    video=0.5,
     canvas=0.2,
     bgString=0.3,
     bgNumber=0.3
@@ -82,7 +84,7 @@ export declare interface IGrowElement{
     /**
      * 动画开始时间
      */
-     startTime: number,
+     startTime: any,
      /**
       * 动画结束时间
       */
@@ -98,7 +100,7 @@ export declare interface IGrowElement{
     /**
      * 元素原始样式()目前包含opacity, scaleX, scaleY
      */
-    originalStyle?:object
+    originalStyle?:any
     
 }
 

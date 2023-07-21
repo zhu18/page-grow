@@ -1,5 +1,5 @@
 import type {IGrowHTMLElement} from './common'
-import  {gsap} from './common'
+import  {pageGrowGsap} from './common'
 import {IParserRule, RuleFactory, EGrowType}  from './rule'
 import  {HTMLPageParser}  from './parser'
 import  {HTMLGrowAnimateController, GrowTimeLine, isTl}  from './animate'
@@ -9,7 +9,7 @@ import {parseTarget, rangRandom} from './utils/tool'
 export interface PageGrowOption{
     target: string | HTMLElement | Array<object>, // 动画对象,支持类名、id、dom对象、配置文件(类似于dev parts.js)
     growType:EGrowType, //动画类型
-    interval: number, // 块之间动画间隔
+    interval: number, // 块之间动画间隔d
     stringType: string, //文本动画类型
     numberType: string,//数字动画类型
     bgType: string,//背景动画类型
@@ -23,8 +23,9 @@ export interface PageGrowOption{
     anovSimpleMode: boolean, //是否基于anov使用简单模式
     parseLayer: number, //解析dom层级
     tls: Array<{id: String, tl: gsap.core.Animation}>, //传入子组件动画线及动画对象
+    adjustTlDur?: true,
     parts?: [], //传入json配置项
-    labels?: {},
+    labels?:  Labels,
     reversedCallback: Callback,
     completeCallback: Callback,
 }
@@ -32,14 +33,21 @@ export interface PageGrowOption{
 interface initOption{
     type: number,
     target: string | HTMLElement | Array<object>,
-    config?: object,
-    labels?: object,
+    adjustTlDur?: true,
+    parseLayer?: number,
+    interval?: number,
+    config?: any,
+    labels?: Labels,
     tls?: Array<{id: String, tl: gsap.core.Animation}>,
     reversedCallback: Callback,
     completeCallback: Callback,
 
 }
 
+//定义labels
+interface Labels{
+    [key: string]: string|number
+}
 type Callback = () => void
 
 /**
@@ -60,11 +68,11 @@ export interface EffectObj{
 
 class PageGrow{
 
-    public option:PageGrowOption
+    public option:PageGrowOption 
     public _animateController:HTMLGrowAnimateController
 
     constructor(opt:initOption){
-        
+       
         // 设置默认参数
         this.option = this._initOption(opt)
         //配置解析规则
@@ -94,9 +102,15 @@ class PageGrow{
             option = {...opt}
         }
         let target = parseTarget(option?.target)
-        let config = this._parseOption(option)
+        let config = this._parseOption(option), adjustTlDur
+        if('adjustTlDur' in opt) {
+            adjustTlDur = opt.adjustTlDur
+        }else {
+            adjustTlDur = true
+        }
         return {
             target,
+            adjustTlDur: adjustTlDur,
             ...config,
             tls: option?.tls || Array<{id: String, tl: gsap.core.Animation}>,
             labels: option?.labels || {},
@@ -112,18 +126,67 @@ class PageGrow{
      * @returns 
      */
     private _parseOption(opt: initOption){
-        let config:object = {}, growType: EGrowType = 2
-
+        let config:any = {}, growType: EGrowType = 2,  hasMatchType = false
+        
         defaultConfig.forEach(item => {
-            if(item.type == opt.type){
+            if(item.type == Number(opt.type)){
+                hasMatchType = true
                 config = item.config
-                growType = item.growType || item.config.growType
+                growType = item.growType || Number(item.config.growType)
             }
         })
+        //未匹配到type,则设置为2
+        if(!hasMatchType) {
+            console.warn('未匹配到传入的动画类型,默认设置为type=2！请参考https://www.npmjs.com/package/page-grow')
+            let type = 2
+            defaultConfig.forEach(item => {
+                if(item.type === type) 
+                config =  item.config
+            })
+        }
+        //opt.parseLayer存在
+        if(opt && 'parseLayer' in opt){
+            let parseLayer = opt.parseLayer! - 0
+            if(isNaN(parseLayer)){
+                console.warn("请传入正确的parseLayer参数！请参考https://www.npmjs.com/package/page-grow'")    
+            }else {
+                config.parseLayer = parseLayer
+            }
+        }
+        //opt.interval
+        if(opt && 'interval' in opt){
+            let interval = opt.interval! - 0
+            if(isNaN(interval)){
+                console.warn("请传入正确的interval参数！请参考https://www.npmjs.com/package/page-grow'")    
+            }else {
+                config.interval = interval
+            }
+        }
+        //opt.config.parseLayer存在
+        let optConfig = {...opt.config}
+        if(optConfig && 'parseLayer' in optConfig){
+            optConfig.parseLayer = optConfig.parseLayer - 0
+            if(isNaN(optConfig.parseLayer)){
+                console.warn("请传入正确的parseLayer参数！请参考https://www.npmjs.com/package/page-grow'")    
+                optConfig.parseLayer = config.parseLayer
+            }
+            
+        }
+        //opt.config.parseLayer存在
+     
+        if(optConfig && 'interval' in optConfig){
+            optConfig.interval = optConfig.interval - 0
+            if(isNaN(optConfig.interval)){
+                console.warn("请传入正确的interval参数！请参考https://www.npmjs.com/package/page-grow'")    
+                optConfig.interval = config.interval
+            }
+        }
+        //parseLayer类型转换
+
         // if(opt.type == 1) return Object.assign({growType}, config, opt.config)
         // if(opt.config?.interval) return {growType, ...config, interval: opt.config?.interval }
 
-        return Object.assign({growType}, config, opt.config)
+        return Object.assign({growType}, config, optConfig )
 
         return Object.assign({growType}, config)
         
@@ -149,15 +212,17 @@ class PageGrow{
     }
     public creatTl():GrowTimeLine|undefined{
         let tl = this._animateController?.creatTl()
-        if(tl && (tl?.duration() - 0 > 5 ) ){
-            tl?.duration(rangRandom(4, 5))
-        }
-        if(this.option.target && this.option.target instanceof Array && this.option.target.length){
+        
+        //是否开启动画线时长调整
+        if(this.option.adjustTlDur){
+            if(tl && (tl?.duration() - 0 > 5 ) ){
+                tl?.duration(rangRandom(4, 5))
+            }
+            // 判断动画对象个数
             if(tl && (tl?.duration() - 0 < 2 ) ){
                 tl?.duration(rangRandom(2, 3))
             }
         }
-        
         return tl
     }
 
@@ -167,16 +232,17 @@ class PageGrow{
 }
 
 const pageGrow = {
-    gsap,
+    gsap: pageGrowGsap,
     option: {},
     config: defaultConfig,
-    tl: gsap.timeline(),
+    tl: pageGrowGsap.timeline(),
     els: [] as Array<IGrowHTMLElement>,
     init(opt:initOption){
         if(!opt.target) {
             console.warn('请传入动画对象!')
             return 
-        }else {
+        }else  if(opt.type === 0){console.warn('传入动画类型为0，需使用自定义动画类型');return }
+        else {
             pageGrow.tl?.eventCallback("onComplete", () => {
                 if(typeof opt.completeCallback == 'function'){
                     opt.completeCallback()

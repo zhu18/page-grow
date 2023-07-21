@@ -1,4 +1,4 @@
-import { IGrowHTMLElement,EGrowElementType,  EGrowElementTime, gsap } from "./common"
+import { IGrowHTMLElement,EGrowElementType,  EGrowElementTime, pageGrowGsap as gsap } from "./common"
 import { EGrowType } from './rule'
 import {PageGrowOption, EffectObj} from './engine'
 import {fomatterNum} from './utils/tool'
@@ -55,8 +55,49 @@ export class HTMLGrowAnimateController implements IGrowAnimateController{
     private _option:PageGrowOption
 
     private _init(){
-        this._tl.add(this._getTl(this._els))
+        if(this._option.labels && JSON.stringify(this._option.labels) != "{}"){
+            this._tl.add(this._getPageTl(this._els))
+        }else {
+            this._tl.add(this._getTl(this._els))
+        }
+        
         return this._tl 
+    }
+    /**
+     * 若有传入labels,获取动画线
+     * @param els 
+     * @returns 
+     */
+    _getPageTl(els: Array<IGrowHTMLElement>): GrowTimeLine{
+        let pageTl = new GrowTimeLine()
+        if(this._option.labels?.hasOwnProperty('start')){
+            pageTl.addLabel('start', this._option.labels.start) 
+        }else {
+            pageTl.addLabel('pageTl') 
+        }
+        for(let i = 0; i < els.length; i++){
+            let startTime = els[i].startTime, position: any
+            if(typeof(startTime) == 'string'  && startTime.indexOf("+=") > -1){
+                position = startTime
+            }else {
+                position = 'pageTl+=' + (startTime - 0)
+            }
+            //判断该元素是否有自定义动画线
+            let customTl = this._elementHasCustomTl(els[i])
+            if(isTl(customTl)){
+                pageTl.add(customTl, position)
+            }else {
+                if(isTl(els[i].tl)){
+                    pageTl.add(els[i].tl, position)
+
+                }else {
+                    let tw = this._setElementAnimate(els[i])
+                    pageTl.add(tw, position)
+                   
+                }
+            }
+        }
+        return pageTl
     }
     /**
      * 获取动画线
@@ -68,10 +109,7 @@ export class HTMLGrowAnimateController implements IGrowAnimateController{
         parentTl.addLabel('startParentTl')
         for(let i = 0; i < els.length; i++){
 
-            let startTime = 0
-            if(!this._option.labels || JSON.stringify(this._option.labels) == '{}'){
-                startTime = i * this._option.interval
-            }
+            let startTime = i * this._option.interval
 
             let childTl = new GrowTimeLine()
             childTl.addLabel('startChildTl')
@@ -85,7 +123,6 @@ export class HTMLGrowAnimateController implements IGrowAnimateController{
 
                 }else {
                     let tw = this._setElementAnimate(els[i])
-                        tw.then(() => {els[i].el.style.overflow = 'inherit' })
                     parentTl.add(tw, 'start+=' + startTime)
                     if(els[i].children.length){
                         childTl = this._getTlRecurve(els[i].children)
@@ -122,7 +159,6 @@ export class HTMLGrowAnimateController implements IGrowAnimateController{
                         tl.add(els[i][j].tl, 'start+=' + els[i][j].startTime)
                     }else {
                         let tw = this._setElementAnimate(els[i][j])
-                        tw.then(() => {els[i][j].el.style.overflow = 'inherit'})
                         tl.add(tw, 'start+=' + els[i][j].startTime)
                         if(els[i][j].children.length){
                             tl.add(this._getTlRecurve(els[i][j].children), 'start+=' + els[i][j].startTime)
@@ -244,6 +280,16 @@ export class HTMLGrowAnimateController implements IGrowAnimateController{
             gt = element.grow
         }else {
             element.grow=gt
+        }
+        if(element.type !== EGrowElementType.none){
+            gt.then(() => {
+                if(element.originalStyle?.overflow == 'visible'){
+                    element.el.style.overflow = ''
+                }else {
+                    element.el.style.overflow = element.originalStyle?.overflow
+                }
+                
+            })
         }
         return gt
     }

@@ -18,6 +18,9 @@ import {pageGrow} from 'page-grow'
 | ------------- |---------------|-----|-------|-------|
 | target          | 动画对象          |  HTMLElement/string  | - | 是 |
 | type          | 动画类型，可选类型参考[option.type](#optiontype) |  number  | 2 | 否 |
+| parseLayer          | 解析层数。v0.2.1+支持 |  number | 1 | 否 |
+| interval          | 解析层数。v0.2.1+支持 | number  | 0.02 | 否 |
+| adjustTlDur          | 是否调整入场动画时长。v0.2.1+支持 |  boolean  | true | 否 |
 | config          | 配置参数，每种`type`都有对应的一套默认配置。<br/> 详细配置参考[option.config](#optionconfig)         |  object  | {} | 否 |
 
 #### option.type
@@ -38,17 +41,17 @@ import {pageGrow} from 'page-grow'
 #### option.config
 | 参 数          | 说 明           |   类 型  | 默认值 |
 | ------------- |---------------| -----|-------|
-| interval          | 动画间隔          |  number  |  0.02|
-| parseLayer          | 解析层数          |  number  |  1|
-| bgType          | 背景元素动画效果类型<br/>可选值有[类型](#optionconfigbgtype)中的1、2、3、4          |  string  |  sys_opacity|
-| stringType| 字符串元素动画效果类型<br/>可选值有[类型](#optionconfigbgtype)中的1、2、3、4、6、7 |  string  | sys_opacity|
-| numberType| 数字元素动画效果类型 <br/>可选值有[类型](#optionconfigbgtype)中的1、2、3、4、5 |  string|  sys_opacity|
-| imageType | 图片元素动画效果类型 <br/>可选值有[类型](#optionconfigbgtype)中的1、2、3、4         |  string  |  sys_opacity|
-| svgType  | svg元素动画效果类型 <br/>可选值有[类型](#optionconfigbgtype)中的1         |  string  |  sys_opacity|
-| canvasType | canvas元素动画效果类型<br/>可选值有[类型](#optionconfigbgtype)中的1         |  string  |  sys_opacity|
-| videoType  | video元素动画效果类型<br/>可选值有[类型](#optionconfigbgtype)中的1、2、3、4          |  string  |  sys_opacity|
-| chartType  | 图表元素动画效果类型<br/>可选值有[类型](#optionconfigbgtype)中的1、2、3、4          |  string  |  sys_opacity|
-| leafNodeType  | 叶子元素动画效果类型<br/>可选值有[类型](#optionconfigbgtype)中的1、2、3、4          |  string  |  sys_opacity|
+| interval          | 动画间隔。覆盖`option.interval`          |  number  |  0.02|
+| parseLayer          | 解析层数。覆盖`option.parseLayer`           |  number  |  1|
+| bgType          | 背景元素动画效果类型<br/>可选值有[bgtype](#optionconfigbgtype)中的1、2、3、4          |  string  |  sys_opacity|
+| stringType| 字符串元素动画效果类型<br/>可选值有[bgtype](#optionconfigbgtype)中的1、2、3、4、6、7 |  string  | sys_opacity|
+| numberType| 数字元素动画效果类型 <br/>可选值有[bgtype](#optionconfigbgtype)中的1、2、3、4、5 |  string|  sys_opacity|
+| imageType | 图片元素动画效果类型 <br/>可选值有[bgtype](#optionconfigbgtype)中的1、2、3、4         |  string  |  sys_opacity|
+| svgType  | svg元素动画效果类型 <br/>可选值有[bgtype](#optionconfigbgtype)中的1         |  string  |  sys_opacity|
+| canvasType | canvas元素动画效果类型<br/>可选值有[bgtype](#optionconfigbgtype)中的1         |  string  |  sys_opacity|
+| videoType  | video元素动画效果类型<br/>可选值有[bgtype](#optionconfigbgtype)中的1、2、3、4          |  string  |  sys_opacity|
+| chartType  | 图表元素动画效果类型<br/>可选值有[bgtype](#optionconfigbgtype)中的1、2、3、4          |  string  |  sys_opacity|
+| leafNodeType  | 叶子元素动画效果类型<br/>可选值有[bgtype](#optionconfigbgtype)中的1、2、3、4          |  string  |  sys_opacity|
 
 #### option.config.bgType
 | 序号 | 类型          | 说 明           |

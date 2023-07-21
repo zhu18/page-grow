@@ -11033,6 +11033,7 @@ gsapWithCSS.registerPlugin(SplitText$1);
 gsapWithCSS.registerPlugin(CustomEase);
 gsapWithCSS.registerPlugin(DrawSVGPlugin);
 gsapWithCSS.SplitText = SplitText$1;
+var pageGrowGsap = gsapWithCSS;
 /**
  * 动画对象类型
  */
@@ -11057,13 +11058,13 @@ var EGrowElementTime;
 (function (EGrowElementTime) {
     EGrowElementTime[EGrowElementTime["number"] = 0.3] = "number";
     EGrowElementTime[EGrowElementTime["string"] = 0.3] = "string";
-    EGrowElementTime[EGrowElementTime["image"] = 0.2] = "image";
-    EGrowElementTime[EGrowElementTime["chart"] = 0.2] = "chart";
+    EGrowElementTime[EGrowElementTime["image"] = 0.6] = "image";
+    EGrowElementTime[EGrowElementTime["chart"] = 0.6] = "chart";
     EGrowElementTime[EGrowElementTime["none"] = 0] = "none";
     EGrowElementTime[EGrowElementTime["svg"] = 0.2] = "svg";
-    EGrowElementTime[EGrowElementTime["bg"] = 0.2] = "bg";
+    EGrowElementTime[EGrowElementTime["bg"] = 0.6] = "bg";
     EGrowElementTime[EGrowElementTime["audio"] = 0.3] = "audio";
-    EGrowElementTime[EGrowElementTime["video"] = 0.2] = "video";
+    EGrowElementTime[EGrowElementTime["video"] = 0.5] = "video";
     EGrowElementTime[EGrowElementTime["canvas"] = 0.2] = "canvas";
     EGrowElementTime[EGrowElementTime["bgString"] = 0.3] = "bgString";
     EGrowElementTime[EGrowElementTime["bgNumber"] = 0.3] = "bgNumber";
@@ -11373,14 +11374,14 @@ var GrowTween = /** @class */ (function (_super) {
         return _super !== null && _super.apply(this, arguments) || this;
     }
     return GrowTween;
-}(gsapWithCSS.core.Tween));
+}(pageGrowGsap.core.Tween));
 var GrowTimeLine = /** @class */ (function (_super) {
     __extends(GrowTimeLine, _super);
     function GrowTimeLine() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
     return GrowTimeLine;
-}(gsapWithCSS.core.Timeline));
+}(pageGrowGsap.core.Timeline));
 /**
  * 进出场动画控制器
  */
@@ -11395,8 +11396,52 @@ var HTMLGrowAnimateController = /** @class */ (function () {
         // this._tl= gsap.timeline()
     }
     HTMLGrowAnimateController.prototype._init = function () {
-        this._tl.add(this._getTl(this._els));
+        if (this._option.labels && JSON.stringify(this._option.labels) != "{}") {
+            this._tl.add(this._getPageTl(this._els));
+        }
+        else {
+            this._tl.add(this._getTl(this._els));
+        }
         return this._tl;
+    };
+    /**
+     * 若有传入labels,获取动画线
+     * @param els
+     * @returns
+     */
+    HTMLGrowAnimateController.prototype._getPageTl = function (els) {
+        var _a;
+        var pageTl = new GrowTimeLine();
+        if ((_a = this._option.labels) === null || _a === void 0 ? void 0 : _a.hasOwnProperty('start')) {
+            pageTl.addLabel('start', this._option.labels.start);
+        }
+        else {
+            pageTl.addLabel('pageTl');
+        }
+        for (var i = 0; i < els.length; i++) {
+            var startTime = els[i].startTime, position = void 0;
+            if (typeof (startTime) == 'string' && startTime.indexOf("+=") > -1) {
+                position = startTime;
+            }
+            else {
+                position = 'pageTl+=' + (startTime - 0);
+            }
+            //判断该元素是否有自定义动画线
+            var customTl = this._elementHasCustomTl(els[i]);
+            if (isTl(customTl)) {
+                pageTl.add(customTl, position);
+            }
+            else {
+                if (isTl(els[i].tl)) {
+                    pageTl.add(els[i].tl, position);
+                }
+                else {
+                    var tw = this._setElementAnimate(els[i]);
+                    pageTl.add(tw, position);
+                }
+            }
+        }
+        return pageTl;
     };
     /**
      * 获取动画线
@@ -11406,15 +11451,12 @@ var HTMLGrowAnimateController = /** @class */ (function () {
     HTMLGrowAnimateController.prototype._getTl = function (els) {
         var parentTl = new GrowTimeLine();
         parentTl.addLabel('startParentTl');
-        var _loop_1 = function (i) {
-            var startTime = 0;
-            if (!this_1._option.labels || JSON.stringify(this_1._option.labels) == '{}') {
-                startTime = i * this_1._option.interval;
-            }
+        for (var i = 0; i < els.length; i++) {
+            var startTime = i * this._option.interval;
             var childTl = new GrowTimeLine();
             childTl.addLabel('startChildTl');
             //判断该元素是否有自定义动画线
-            var customTl = this_1._elementHasCustomTl(els[i]);
+            var customTl = this._elementHasCustomTl(els[i]);
             if (isTl(customTl)) {
                 parentTl.add(customTl, 'start+=' + startTime);
             }
@@ -11423,19 +11465,14 @@ var HTMLGrowAnimateController = /** @class */ (function () {
                     parentTl.add(els[i].tl, 'start+=' + startTime);
                 }
                 else {
-                    var tw = this_1._setElementAnimate(els[i]);
-                    tw.then(function () { els[i].el.style.overflow = 'inherit'; });
+                    var tw = this._setElementAnimate(els[i]);
                     parentTl.add(tw, 'start+=' + startTime);
                     if (els[i].children.length) {
-                        childTl = this_1._getTlRecurve(els[i].children);
+                        childTl = this._getTlRecurve(els[i].children);
                     }
                 }
             }
             isTl(childTl) && parentTl.add(childTl, 'start+=' + startTime);
-        };
-        var this_1 = this;
-        for (var i = 0; i < els.length; i++) {
-            _loop_1(i);
         }
         return parentTl;
     };
@@ -11447,14 +11484,14 @@ var HTMLGrowAnimateController = /** @class */ (function () {
     HTMLGrowAnimateController.prototype._getTlRecurve = function (els) {
         var parentTl = new GrowTimeLine();
         parentTl.addLabel('start');
-        var _loop_2 = function (i) {
+        for (var i = 0; i < els.length; i++) {
             var minDuration = 0;
             var childTl = new GrowTimeLine();
             childTl.addLabel('start');
-            var _loop_3 = function (j) {
+            for (var j = 0; j < els[i].length; j++) {
                 var tl = new GrowTimeLine();
                 //判断该元素是否有自定义动画线
-                var customTl = this_2._elementHasCustomTl(els[i][j]);
+                var customTl = this._elementHasCustomTl(els[i][j]);
                 if (customTl.duration()) {
                     tl.add(customTl, 'start+=' + els[i][j].startTime);
                 }
@@ -11463,32 +11500,24 @@ var HTMLGrowAnimateController = /** @class */ (function () {
                         tl.add(els[i][j].tl, 'start+=' + els[i][j].startTime);
                     }
                     else {
-                        var tw = this_2._setElementAnimate(els[i][j]);
-                        tw.then(function () { els[i][j].el.style.overflow = 'inherit'; });
+                        var tw = this._setElementAnimate(els[i][j]);
                         tl.add(tw, 'start+=' + els[i][j].startTime);
                         if (els[i][j].children.length) {
-                            tl.add(this_2._getTlRecurve(els[i][j].children), 'start+=' + els[i][j].startTime);
+                            tl.add(this._getTlRecurve(els[i][j].children), 'start+=' + els[i][j].startTime);
                         }
                     }
                 }
                 isTl(tl) && childTl.add(tl, 'start+=' + els[i][j].startTime);
                 minDuration = minDuration ? Math.min(minDuration, tl.duration()) : tl.duration();
-            };
-            for (var j = 0; j < els[i].length; j++) {
-                _loop_3(j);
             }
             //获取某一行各模块最小动画时间，与interval比较，得到下一行开始时间
             // minDuration = Math.min(minDuration, this._option.interval)
             // totalMin += minDuration
             var startTime = 0;
-            if (!this_2._option.labels || JSON.stringify(this_2._option.labels) == '{}') {
-                startTime = i * this_2._option.interval;
+            if (!this._option.labels || JSON.stringify(this._option.labels) == '{}') {
+                startTime = i * this._option.interval;
             }
             isTl(childTl) && parentTl.add(childTl, 'start+=' + startTime);
-        };
-        var this_2 = this;
-        for (var i = 0; i < els.length; i++) {
-            _loop_2(i);
         }
         return parentTl;
     };
@@ -11501,7 +11530,7 @@ var HTMLGrowAnimateController = /** @class */ (function () {
     });
     Object.defineProperty(HTMLGrowAnimateController.prototype, "effects", {
         get: function () {
-            var effects = Object.keys(gsapWithCSS.effects);
+            var effects = Object.keys(pageGrowGsap.effects);
             return effects;
         },
         enumerable: false,
@@ -11530,19 +11559,19 @@ var HTMLGrowAnimateController = /** @class */ (function () {
     HTMLGrowAnimateController.prototype.addEffect = function (effectList) {
         //存在问题：未进行效果名称同名处理
         effectList.forEach(function (effect) {
-            gsapWithCSS.registerEffect({
+            pageGrowGsap.registerEffect({
                 name: effect.id,
                 defaults: { duration: 1 },
                 extendTimeline: true,
                 effect: function (targets, config) {
                     if (effect.animate === 'from') {
-                        return gsapWithCSS.from(targets, __assign(__assign({}, effect.props), config));
+                        return pageGrowGsap.from(targets, __assign(__assign({}, effect.props), config));
                     }
                     else if (effect.animate === 'fromTo') {
-                        return gsapWithCSS.fromTo(targets, __assign(__assign({}, effect.props), config), __assign({}, effect.props2));
+                        return pageGrowGsap.fromTo(targets, __assign(__assign({}, effect.props), config), __assign({}, effect.props2));
                     }
                     else {
-                        return gsapWithCSS.to(targets, __assign(__assign({}, effect.props), config));
+                        return pageGrowGsap.to(targets, __assign(__assign({}, effect.props), config));
                     }
                 }
             });
@@ -11555,39 +11584,39 @@ var HTMLGrowAnimateController = /** @class */ (function () {
         switch (element.type) {
             case EGrowElementType.chart:
                 // gt=new GrowTween(element.el,{duration: 1, background:'red',opacity: 1})
-                gt = gsapWithCSS.effects[this._option.chartType](element.el, { duration: EGrowElementTime.chart, originalStyle: element.originalStyle });
+                gt = pageGrowGsap.effects[this._option.chartType](element.el, { duration: EGrowElementTime.chart, originalStyle: element.originalStyle });
                 break;
             case EGrowElementType.bg:
-                gt = gsapWithCSS.effects[this._option.bgType](element.el, { duration: EGrowElementTime.bg, originalStyle: element.originalStyle });
+                gt = pageGrowGsap.effects[this._option.bgType](element.el, { duration: EGrowElementTime.bg, originalStyle: element.originalStyle });
                 // gt = gsap.effects[this._option.bgType](element.el, {duration: EGrowElementTime.bg, originalStyle: element.originalStyle})
                 break;
             case EGrowElementType.image:
-                gt = gsapWithCSS.effects[this._option.imageType](element.el, { duration: EGrowElementTime.image, originalStyle: element.originalStyle });
+                gt = pageGrowGsap.effects[this._option.imageType](element.el, { duration: EGrowElementTime.image, originalStyle: element.originalStyle });
                 break;
             case EGrowElementType.svg:
-                gt = gsapWithCSS.effects[this._option.svgType](element.el, { duration: EGrowElementTime.svg, originalStyle: element.originalStyle });
+                gt = pageGrowGsap.effects[this._option.svgType](element.el, { duration: EGrowElementTime.svg, originalStyle: element.originalStyle });
                 break;
             case EGrowElementType.canvas:
-                gt = gsapWithCSS.effects[this._option.canvasType](element.el, { duration: EGrowElementTime.svg, originalStyle: element.originalStyle });
+                gt = pageGrowGsap.effects[this._option.canvasType](element.el, { duration: EGrowElementTime.svg, originalStyle: element.originalStyle });
                 break;
             case EGrowElementType.video:
-                gt = gsapWithCSS.effects[this._option.videoType](element.el, { duration: EGrowElementTime.video, originalStyle: element.originalStyle });
+                gt = pageGrowGsap.effects[this._option.videoType](element.el, { duration: EGrowElementTime.video, originalStyle: element.originalStyle });
                 break;
             case EGrowElementType.string:
-                gt = gsapWithCSS.effects[this._option.stringType](element.el, { duration: EGrowElementTime.string, originalStyle: element.originalStyle });
+                gt = pageGrowGsap.effects[this._option.stringType](element.el, { duration: EGrowElementTime.string, originalStyle: element.originalStyle });
                 break;
             case EGrowElementType.number:
-                gt = gsapWithCSS.effects[this._option.numberType](element.el, { duration: EGrowElementTime.number, value: (_a = element.el) === null || _a === void 0 ? void 0 : _a.innerHTML, originalStyle: element.originalStyle });
+                gt = pageGrowGsap.effects[this._option.numberType](element.el, { duration: EGrowElementTime.number, value: (_a = element.el) === null || _a === void 0 ? void 0 : _a.innerHTML, originalStyle: element.originalStyle });
                 break;
             case EGrowElementType.bgNumber:
-                gt = gsapWithCSS.effects.sys_bgNumber(element.el, { duration: EGrowElementTime.bgNumber, value: (_b = element.el) === null || _b === void 0 ? void 0 : _b.innerHTML, originalStyle: element.originalStyle });
+                gt = pageGrowGsap.effects.sys_bgNumber(element.el, { duration: EGrowElementTime.bgNumber, value: (_b = element.el) === null || _b === void 0 ? void 0 : _b.innerHTML, originalStyle: element.originalStyle });
                 break;
             case EGrowElementType.bgString:
-                gt = gsapWithCSS.effects.sys_opacity(element.el, { duration: EGrowElementTime.bgString, value: (_c = element.el) === null || _c === void 0 ? void 0 : _c.innerHTML, originalStyle: element.originalStyle });
+                gt = pageGrowGsap.effects.sys_opacity(element.el, { duration: EGrowElementTime.bgString, value: (_c = element.el) === null || _c === void 0 ? void 0 : _c.innerHTML, originalStyle: element.originalStyle });
                 break;
             case EGrowElementType.leafNode:
                 // gt=gsap.effects[this._option.leafNodeType](element.el, {duration: EGrowElementTime.string})
-                gt = gsapWithCSS.effects[this._option.leafNodeType](element.el, { duration: EGrowElementTime.bg, originalStyle: element.originalStyle });
+                gt = pageGrowGsap.effects[this._option.leafNodeType](element.el, { duration: EGrowElementTime.bg, originalStyle: element.originalStyle });
                 break;
             case EGrowElementType.none:
                 gt = new GrowTween(element.el, { duration: 0 });
@@ -11603,6 +11632,17 @@ var HTMLGrowAnimateController = /** @class */ (function () {
         else {
             element.grow = gt;
         }
+        if (element.type !== EGrowElementType.none) {
+            gt.then(function () {
+                var _a, _b;
+                if (((_a = element.originalStyle) === null || _a === void 0 ? void 0 : _a.overflow) == 'visible') {
+                    element.el.style.overflow = '';
+                }
+                else {
+                    element.el.style.overflow = (_b = element.originalStyle) === null || _b === void 0 ? void 0 : _b.overflow;
+                }
+            });
+        }
         return gt;
     };
     //注册动画类型
@@ -11610,37 +11650,37 @@ var HTMLGrowAnimateController = /** @class */ (function () {
         var _this = this;
         //后期配置文件读入，提高可配性
         //透明度0 -> 1
-        gsapWithCSS.registerEffect({
+        pageGrowGsap.registerEffect({
             name: 'sys_opacity',
             effect: function (targets, config) {
-                return gsapWithCSS.fromTo(targets, { opacity: 0 }, { opacity: 1, duration: config.duration });
+                return pageGrowGsap.fromTo(targets, { opacity: 0 }, { opacity: 1, duration: config.duration });
             },
         });
         //缩放
-        gsapWithCSS.registerEffect({
+        pageGrowGsap.registerEffect({
             name: 'sys_scale',
             effect: function (targets, config) {
                 // return gsap.fromTo(targets, {opacity: 0, scale: 0}, {opacity: config.originalStyle.opacity, scaleX: config.originalStyle.scaleX, scaleY: config.originalStyle.scaleY, transformOrigin: this._getTransformOrigin(), duration: config.duration});
                 // return gsap.fromTo(targets, {opacity: 0, scale: 0}, {opacity: config.originalStyle?.opacity || 1, scaleX: config.originalStyle?.scaleX || 1, scaleY: config.originalStyle?.scaleY||1,  transformOrigin: this._getTransformOrigin(), duration: config.duration});
-                return gsapWithCSS.fromTo(targets, { opacity: 0, scale: 0 }, { opacity: 1, scale: 1, transformOrigin: _this._getTransformOrigin(), duration: config.duration });
+                return pageGrowGsap.fromTo(targets, { opacity: 0, scale: 0 }, { opacity: 1, scale: 1, transformOrigin: _this._getTransformOrigin(), duration: config.duration });
             },
         });
         //高度变化
-        gsapWithCSS.registerEffect({
+        pageGrowGsap.registerEffect({
             name: 'sys_height',
             effect: function (targets, config) {
-                return gsapWithCSS.fromTo(targets, { opacity: 0, height: 0 }, { opacity: 1, height: config.originalStyle.height, duration: config.duration });
+                return pageGrowGsap.fromTo(targets, { opacity: 0, height: 0 }, { opacity: 1, height: config.originalStyle.height, duration: config.duration });
             },
         });
         //宽度变化
-        gsapWithCSS.registerEffect({
+        pageGrowGsap.registerEffect({
             name: 'sys_width',
             effect: function (targets, config) {
-                return gsapWithCSS.fromTo(targets, { opacity: 0, width: 0 }, { opacity: 1, width: config.originalStyle.width, duration: config.duration });
+                return pageGrowGsap.fromTo(targets, { opacity: 0, width: 0 }, { opacity: 1, width: config.originalStyle.width, duration: config.duration });
             },
         });
         //数字
-        gsapWithCSS.registerEffect({
+        pageGrowGsap.registerEffect({
             name: 'sys_number',
             effect: function (targets, config) {
                 var decimals = 0;
@@ -11655,8 +11695,8 @@ var HTMLGrowAnimateController = /** @class */ (function () {
                 else {
                     actualValue = config.value;
                 }
-                return gsapWithCSS.to(targets, { opacity: 1, duration: 0.1, onComplete: function () {
-                        gsapWithCSS.to(count, { duration: config.duration, val: actualValue, onUpdate: function () {
+                return pageGrowGsap.to(targets, { opacity: 1, duration: 0.1, onComplete: function () {
+                        pageGrowGsap.to(count, { duration: config.duration, val: actualValue, onUpdate: function () {
                                 if (hasThousander) {
                                     targets[0].innerHTML = fomatterNum(Number(count.val.toFixed(decimals)));
                                 }
@@ -11668,21 +11708,21 @@ var HTMLGrowAnimateController = /** @class */ (function () {
             },
         });
         //stringWave
-        gsapWithCSS.registerEffect({
+        pageGrowGsap.registerEffect({
             name: 'sys_stringWave',
             effect: function (targets, config) {
                 var _a = _this._computedStringDuration(targets[0].innerHTML.length), duration = _a.duration, stagger = _a.stagger;
-                var mySplitText = new gsapWithCSS.SplitText(targets, { type: "chars" });
+                var mySplitText = new pageGrowGsap.SplitText(targets, { type: "chars" });
                 var chars = mySplitText.chars;
-                gsapWithCSS.set(targets, { perspective: 400 });
+                pageGrowGsap.set(targets, { perspective: 400 });
                 // return gsap.to(targets, {duration: 0.01, opacity: 1, onComplete: () => {
                 //     gsap.from(chars, {duration: duration, opacity:0, scale:0, y:80, rotationX:100, transformOrigin:"0% 50% -50", ease:"back", stagger: stagger});
                 // }})
-                return gsapWithCSS.from(chars, { duration: duration, opacity: 0, scale: 0, y: 80, rotationX: 100, transformOrigin: "0% 50% -50", ease: "back", stagger: stagger });
+                return pageGrowGsap.from(chars, { duration: duration, opacity: 0, scale: 0, y: 80, rotationX: 100, transformOrigin: "0% 50% -50", ease: "back", stagger: stagger });
             },
         });
         //stringPrint
-        gsapWithCSS.registerEffect({
+        pageGrowGsap.registerEffect({
             name: 'sys_stringPrint',
             effect: function (targets, config) {
                 var _a = _this._computedStringDuration(targets[0].innerHTML.length), duration = _a.duration; _a.stagger;
@@ -11692,28 +11732,28 @@ var HTMLGrowAnimateController = /** @class */ (function () {
                     speed: 0.2,
                     ease: "none"
                 };
-                gsapWithCSS.set(targets, { opacity: 1 });
-                return gsapWithCSS.to(targets, { duration: duration, scrambleText: __assign({}, opt) });
+                pageGrowGsap.set(targets, { opacity: 1 });
+                return pageGrowGsap.to(targets, { duration: duration, scrambleText: __assign({}, opt) });
             },
         });
         //bgString动画方式：清空动画元素内容->背景动画->背景动画完成设置元素内容->内容动画 
         // 注意： 未测试onComplete里动画时间是否体现在整体动画时间上
-        gsapWithCSS.registerEffect({
+        pageGrowGsap.registerEffect({
             name: 'sys_bgString',
             effect: function (targets, config) {
                 var text = targets[0].innerHTML;
                 targets[0].innerHTML = "";
-                return gsapWithCSS.fromTo(targets, { opacity: 0 }, { opacity: 1, duration: config.duration, onComplete: function () {
+                return pageGrowGsap.fromTo(targets, { opacity: 0 }, { opacity: 1, duration: config.duration, onComplete: function () {
                         targets[0].innerHTML = text;
                         var mySplitText = new SplitText(targets, { type: "chars" });
                         var chars = mySplitText.chars;
-                        gsapWithCSS.set(targets, { perspective: 400 });
-                        gsapWithCSS.from(chars, { duration: config.duration, opacity: 0, scale: 0, y: 80, rotationX: 100, transformOrigin: '0 50% -50', ease: "back", stagger: 0.01 });
+                        pageGrowGsap.set(targets, { perspective: 400 });
+                        pageGrowGsap.from(chars, { duration: config.duration, opacity: 0, scale: 0, y: 80, rotationX: 100, transformOrigin: '0 50% -50', ease: "back", stagger: 0.01 });
                     } });
             },
         });
         //bgNumber
-        gsapWithCSS.registerEffect({
+        pageGrowGsap.registerEffect({
             name: 'sys_bgNumber',
             effect: function (targets, config) {
                 var decimals;
@@ -11729,9 +11769,9 @@ var HTMLGrowAnimateController = /** @class */ (function () {
                 else {
                     actualValue = config.value;
                 }
-                return gsapWithCSS.fromTo(targets, { opacity: 0 }, { duration: config.duration, opacity: 1, onComplete: function () {
+                return pageGrowGsap.fromTo(targets, { opacity: 0 }, { duration: config.duration, opacity: 1, onComplete: function () {
                         var count = { val: 0 };
-                        gsapWithCSS.to(count, { duration: config.duration, val: actualValue, onUpdate: function () {
+                        pageGrowGsap.to(count, { duration: config.duration, val: actualValue, onUpdate: function () {
                                 if (hasThousander) {
                                     targets[0].innerHTML = fomatterNum(Number(count.val.toFixed(decimals)));
                                 }
@@ -11798,7 +11838,7 @@ var HTMLGrowAnimateController = /** @class */ (function () {
 }());
 //判断是否为动画线
 function isTl(tl) {
-    if (tl && tl instanceof gsapWithCSS.core.Animation && tl.duration() - 0 > 0)
+    if (tl && tl instanceof pageGrowGsap.core.Animation && tl.duration() - 0 > 0)
         return true;
     return false;
 }
@@ -11941,11 +11981,11 @@ var HTMLPageParser = /** @class */ (function (_super) {
         var _a, _b, _c, _d, _e, _f, _g, _h;
         // 当元素宽/高未设置为0时， 设置为相对定位，获取宽/高
         var w = Number(window.getComputedStyle(el).width.replace("px", "")) || el.offsetWidth, h = Number(window.getComputedStyle(el).height.replace("px", "")) || el.offsetHeight;
-        if (!(w && h)) {
-            el.style.position = 'relative';
-            w = el.scrollWidth;
-            h = el.scrollHeight;
-        }
+        // if(!(w && h)){
+        //     el.style.position = 'relative'
+        //     w = el.scrollWidth
+        //     h = el.scrollHeight
+        // }
         // 获取元素transform原始数值，因为动画是基于opacity、scale属性设置
         var transformStr = window.getComputedStyle(el).transform;
         var transformArr = [], scaleX = 1, scaleY = 1;
@@ -11992,7 +12032,8 @@ var HTMLPageParser = /** @class */ (function (_super) {
                 scaleY: scaleY,
                 transformOrigin: window.getComputedStyle(el).transformOrigin,
                 width: origin_width ? (origin_width + 'px') : window.getComputedStyle(el).width,
-                height: origin_height ? (origin_height + 'px') : window.getComputedStyle(el).height
+                height: origin_height ? (origin_height + 'px') : window.getComputedStyle(el).height,
+                overflow: window.getComputedStyle(el).overflow
             },
             tl: new GrowTimeLine(),
             type: this._getType(el, layer),
@@ -12095,6 +12136,9 @@ var HTMLPageParser = /** @class */ (function (_super) {
             el.style.opacity = 0;
             //  el.style.overflow = 'hidden'
         }
+        if (etype != EGrowElementType.none && (etype !== EGrowElementType.style) && etype !== EGrowElementType.leafNode) {
+            el.classList.add('page-grow-dom');
+        }
         return etype;
     };
     /**
@@ -12112,9 +12156,27 @@ var HTMLPageParser = /** @class */ (function (_super) {
     HTMLPageParser.prototype.getPartElement = function (part, parentX, parentY) {
         if (parentX === void 0) { parentX = 0; }
         if (parentY === void 0) { parentY = 0; }
-        var x = Number(part.style.left + parentX), y = Number(part.style.top + parentY), centerX = Number(x + Number(part.style.width) / 2), centerY = Number(y + Number(part.style.height) / 2);
         var el = document.getElementById(part.id);
         if (el) {
+            var x = 0, y = 0, transformStr = getComputedStyle(el).transform, transformArr = [];
+            if (transformStr != 'none') {
+                if (transformStr.indexOf("matrix") > -1) {
+                    transformArr = transformStr.substring(7).replace(")", "").split(",");
+                }
+            }
+            if ('left' in part.style) {
+                x = Number(part.style.left + parentX);
+            }
+            else {
+                x = parseInt(transformArr[4]);
+            }
+            if ('top' in part.style) {
+                y = Number(part.style.top + parentY);
+            }
+            else {
+                y = parseInt(transformArr[5]);
+            }
+            var centerX = Number(x + Number(part.style.width) / 2), centerY = Number(y + Number(part.style.height) / 2);
             return {
                 el: el,
                 tagName: el === null || el === void 0 ? void 0 : el.tagName,
@@ -12128,7 +12190,7 @@ var HTMLPageParser = /** @class */ (function (_super) {
                 distance: Math.sqrt(Math.pow(centerX - window.innerWidth / 2, 2) + Math.pow(centerY - window.innerHeight / 2, 2)),
                 cornerDistance: Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2)),
                 children: [],
-                startTime: 0,
+                startTime: this._getStartTime(part.id),
                 endTime: 0,
                 duration: 0,
                 tl: this._getCompTl(part.id)
@@ -12142,7 +12204,7 @@ var HTMLPageParser = /** @class */ (function (_super) {
             var part = parts[i], child = [];
             if (part.id) {
                 var el = this.getPartElement(part, parentX, parentY);
-                els.push(el);
+                el && els.push(el);
                 if (((_a = part.children) === null || _a === void 0 ? void 0 : _a.length) > 0) {
                     child = this._parsePartsConfig(part.children, el.x, el.y);
                 }
@@ -12162,6 +12224,17 @@ var HTMLPageParser = /** @class */ (function (_super) {
             }
         });
         return compTl;
+    };
+    HTMLPageParser.prototype._getStartTime = function (id) {
+        var labels = this._option.labels;
+        if (labels && JSON.stringify(labels) != '{}') {
+            for (var item in labels) {
+                if (item == id)
+                    return labels[id];
+            }
+            return 0;
+        }
+        return 0;
     };
     return HTMLPageParser;
 }(AbstractParser));
@@ -12428,8 +12501,14 @@ var PageGrow = /** @class */ (function () {
             option = __assign({}, opt);
         }
         var target = parseTarget(option === null || option === void 0 ? void 0 : option.target);
-        var config = this._parseOption(option);
-        return __assign(__assign({ target: target }, config), { tls: (option === null || option === void 0 ? void 0 : option.tls) || (Array), labels: (option === null || option === void 0 ? void 0 : option.labels) || {}, reversedCallback: option.reversedCallback, completeCallback: option.completeCallback });
+        var config = this._parseOption(option), adjustTlDur;
+        if ('adjustTlDur' in opt) {
+            adjustTlDur = opt.adjustTlDur;
+        }
+        else {
+            adjustTlDur = true;
+        }
+        return __assign(__assign({ target: target, adjustTlDur: adjustTlDur }, config), { tls: (option === null || option === void 0 ? void 0 : option.tls) || (Array), labels: (option === null || option === void 0 ? void 0 : option.labels) || {}, reversedCallback: option.reversedCallback, completeCallback: option.completeCallback });
     };
     /**
      * 参数解析
@@ -12437,16 +12516,64 @@ var PageGrow = /** @class */ (function () {
      * @returns
      */
     PageGrow.prototype._parseOption = function (opt) {
-        var config = {}, growType = 2;
+        var config = {}, growType = 2, hasMatchType = false;
         defaultConfig.forEach(function (item) {
-            if (item.type == opt.type) {
+            if (item.type == Number(opt.type)) {
+                hasMatchType = true;
                 config = item.config;
-                growType = item.growType || item.config.growType;
+                growType = item.growType || Number(item.config.growType);
             }
         });
+        //未匹配到type,则设置为2
+        if (!hasMatchType) {
+            console.warn('未匹配到传入的动画类型,默认设置为type=2！请参考https://www.npmjs.com/package/page-grow');
+            var type_1 = 2;
+            defaultConfig.forEach(function (item) {
+                if (item.type === type_1)
+                    config = item.config;
+            });
+        }
+        //opt.parseLayer存在
+        if (opt && 'parseLayer' in opt) {
+            var parseLayer = opt.parseLayer - 0;
+            if (isNaN(parseLayer)) {
+                console.warn("请传入正确的parseLayer参数！请参考https://www.npmjs.com/package/page-grow'");
+            }
+            else {
+                config.parseLayer = parseLayer;
+            }
+        }
+        //opt.interval
+        if (opt && 'interval' in opt) {
+            var interval = opt.interval - 0;
+            if (isNaN(interval)) {
+                console.warn("请传入正确的interval参数！请参考https://www.npmjs.com/package/page-grow'");
+            }
+            else {
+                config.interval = interval;
+            }
+        }
+        //opt.config.parseLayer存在
+        var optConfig = __assign({}, opt.config);
+        if (optConfig && 'parseLayer' in optConfig) {
+            optConfig.parseLayer = optConfig.parseLayer - 0;
+            if (isNaN(optConfig.parseLayer)) {
+                console.warn("请传入正确的parseLayer参数！请参考https://www.npmjs.com/package/page-grow'");
+                optConfig.parseLayer = config.parseLayer;
+            }
+        }
+        //opt.config.parseLayer存在
+        if (optConfig && 'interval' in optConfig) {
+            optConfig.interval = optConfig.interval - 0;
+            if (isNaN(optConfig.interval)) {
+                console.warn("请传入正确的interval参数！请参考https://www.npmjs.com/package/page-grow'");
+                optConfig.interval = config.interval;
+            }
+        }
+        //parseLayer类型转换
         // if(opt.type == 1) return Object.assign({growType}, config, opt.config)
         // if(opt.config?.interval) return {growType, ...config, interval: opt.config?.interval }
-        return Object.assign({ growType: growType }, config, opt.config);
+        return Object.assign({ growType: growType }, config, optConfig);
     };
     PageGrow.prototype.enter = function () {
         var tl = this.creatTl();
@@ -12469,10 +12596,12 @@ var PageGrow = /** @class */ (function () {
     PageGrow.prototype.creatTl = function () {
         var _a;
         var tl = (_a = this._animateController) === null || _a === void 0 ? void 0 : _a.creatTl();
-        if (tl && ((tl === null || tl === void 0 ? void 0 : tl.duration()) - 0 > 5)) {
-            tl === null || tl === void 0 ? void 0 : tl.duration(rangRandom(4, 5));
-        }
-        if (this.option.target && this.option.target instanceof Array && this.option.target.length) {
+        //是否开启动画线时长调整
+        if (this.option.adjustTlDur) {
+            if (tl && ((tl === null || tl === void 0 ? void 0 : tl.duration()) - 0 > 5)) {
+                tl === null || tl === void 0 ? void 0 : tl.duration(rangRandom(4, 5));
+            }
+            // 判断动画对象个数
             if (tl && ((tl === null || tl === void 0 ? void 0 : tl.duration()) - 0 < 2)) {
                 tl === null || tl === void 0 ? void 0 : tl.duration(rangRandom(2, 3));
             }
@@ -12486,15 +12615,19 @@ var PageGrow = /** @class */ (function () {
     return PageGrow;
 }());
 var pageGrow = {
-    gsap: gsapWithCSS,
+    gsap: pageGrowGsap,
     option: {},
     config: defaultConfig,
-    tl: gsapWithCSS.timeline(),
+    tl: pageGrowGsap.timeline(),
     els: [],
     init: function (opt) {
         var _a;
         if (!opt.target) {
             console.warn('请传入动画对象!');
+            return;
+        }
+        else if (opt.type === 0) {
+            console.warn('传入动画类型为0，需使用自定义动画类型');
             return;
         }
         else {

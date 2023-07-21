@@ -1,4 +1,4 @@
-import { IGrowHTMLElement, gsap } from "./common";
+import { IGrowHTMLElement, pageGrowGsap as gsap } from "./common";
 import { PageGrowOption, EffectObj } from './engine';
 /**
  * 动画基础规则接口
@@ -35,6 +35,12 @@ export declare class HTMLGrowAnimateController implements IGrowAnimateController
     _tl: GrowTimeLine;
     private _option;
     private _init;
+    /**
+     * 若有传入labels,获取动画线
+     * @param els
+     * @returns
+     */
+    _getPageTl(els: Array<IGrowHTMLElement>): GrowTimeLine;
     /**
      * 获取动画线
      * @param els

@@ -61,6 +61,7 @@ export class HTMLPageParser extends AbstractParser{
         if(this._option.target && this._option.target instanceof Array && this._option.target.length){
             //若target 为 parts json
             let els = this._parsePartsConfig(opt.target), _els:Array<any> = []
+
             els.forEach(item => {
                 if(isTl(item.tl)) {
                     _els.push(item)
@@ -167,11 +168,11 @@ export class HTMLPageParser extends AbstractParser{
 
         // 当元素宽/高未设置为0时， 设置为相对定位，获取宽/高
         let w = Number(window.getComputedStyle(el).width.replace("px", "")) || el.offsetWidth, h = Number(window.getComputedStyle(el).height.replace("px", "")) || el.offsetHeight;
-        if(!(w && h)){
-            el.style.position = 'relative'
-            w = el.scrollWidth
-            h = el.scrollHeight
-        }
+        // if(!(w && h)){
+        //     el.style.position = 'relative'
+        //     w = el.scrollWidth
+        //     h = el.scrollHeight
+        // }
      
         // 获取元素transform原始数值，因为动画是基于opacity、scale属性设置
         let transformStr = window.getComputedStyle(el).transform
@@ -221,7 +222,8 @@ export class HTMLPageParser extends AbstractParser{
                 scaleY,
                 transformOrigin: window.getComputedStyle(el).transformOrigin,
                 width: origin_width ? (origin_width + 'px') : window.getComputedStyle(el).width ,
-                height: origin_height ? (origin_height + 'px') : window.getComputedStyle(el).height 
+                height: origin_height ? (origin_height + 'px') : window.getComputedStyle(el).height,
+                overflow: window.getComputedStyle(el).overflow
             },
             tl: new GrowTimeLine(),
             type: this._getType(el, layer),
@@ -324,7 +326,9 @@ export class HTMLPageParser extends AbstractParser{
         }else if(etype != EGrowElementType.none && (etype !== EGrowElementType.style) && (etype !== EGrowElementType.string)){
             el.style.opacity = 0
             //  el.style.overflow = 'hidden'
-
+        }
+        if(etype != EGrowElementType.none && (etype !== EGrowElementType.style) && etype !== EGrowElementType.leafNode){
+            el.classList.add('page-grow-dom')
         }
         return etype
     }
@@ -343,12 +347,25 @@ export class HTMLPageParser extends AbstractParser{
     }
 
     private getPartElement(part: any, parentX: number = 0, parentY: number = 0): any{
-        const  x: number = Number(part.style.left + parentX), 
-               y: number = Number(part.style.top + parentY),
-               centerX: number = Number(x + Number(part.style.width) / 2), 
-               centerY: number = Number(y + Number(part.style.height) / 2)
         let el = document.getElementById(part.id)
         if(el){
+            let  x: number = 0, y: number = 0, transformStr = getComputedStyle(el).transform, transformArr:Array<string> = []
+            if(transformStr != 'none'){
+                if(transformStr.indexOf("matrix")>-1){
+                    transformArr = transformStr.substring(7).replace(")", "").split(",")
+                }
+            }   
+            if('left' in part.style){
+                x = Number(part.style.left + parentX)
+            }else {
+                x = parseInt(transformArr[4])
+            }
+            if('top' in  part.style){
+                y = Number(part.style.top + parentY)
+            }else {
+                y = parseInt(transformArr[5])
+            }
+            let centerX: number = Number(x + Number(part.style.width) / 2),centerY: number = Number(y + Number(part.style.height) / 2)
             return {
                 el,
                 tagName: el?.tagName,
@@ -362,7 +379,7 @@ export class HTMLPageParser extends AbstractParser{
                 distance:  Math.sqrt(Math.pow(centerX - window.innerWidth / 2, 2) + Math.pow(centerY - window.innerHeight / 2, 2)),
                 cornerDistance:  Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2)),
                 children: [],
-                startTime: 0, 
+                startTime: this._getStartTime(part.id), 
                 endTime: 0,
                 duration: 0,
                 tl: this._getCompTl(part.id)
@@ -377,7 +394,7 @@ export class HTMLPageParser extends AbstractParser{
             let part = parts[i],  child = []
             if(part.id){
                 let el = this.getPartElement(part, parentX, parentY)
-                els.push(el)
+                el && els.push(el)
                 if(part.children?.length > 0){
                     child = this._parsePartsConfig(part.children, el.x, el.y)
                 }
@@ -400,7 +417,17 @@ export class HTMLPageParser extends AbstractParser{
         })
         return compTl
     }
-
+    private _getStartTime(id: string): string|number{
+        let labels = this._option.labels
+        if(labels && JSON.stringify(labels) != '{}'){
+            for(let item in labels){
+                if(item == id) return labels[id]
+            }
+            return 0
+        }
+        return 0
+        
+    }
 
 }
 

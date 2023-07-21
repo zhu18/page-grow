@@ -21,22 +21,29 @@ export interface PageGrowOption {
         id: String;
         tl: gsap.core.Animation;
     }>;
+    adjustTlDur?: true;
     parts?: [];
-    labels?: {};
+    labels?: Labels;
     reversedCallback: Callback;
     completeCallback: Callback;
 }
 interface initOption {
     type: number;
     target: string | HTMLElement | Array<object>;
-    config?: object;
-    labels?: object;
+    adjustTlDur?: true;
+    parseLayer?: number;
+    interval?: number;
+    config?: any;
+    labels?: Labels;
     tls?: Array<{
         id: String;
         tl: gsap.core.Animation;
     }>;
     reversedCallback: Callback;
     completeCallback: Callback;
+}
+interface Labels {
+    [key: string]: string | number;
 }
 type Callback = () => void;
 /**
@@ -53,7 +60,7 @@ export interface EffectObj {
     props2: object;
 }
 declare const pageGrow: {
-    gsap: typeof globalThis.gsap;
+    gsap: typeof gsap;
     option: {};
     config: ({
         type: number;
