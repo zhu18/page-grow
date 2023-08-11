@@ -282,6 +282,7 @@ export class HTMLGrowAnimateController implements IGrowAnimateController{
             element.grow=gt
         }
         if(element.type !== EGrowElementType.none){
+            // element.el.style.height = element.h + 'px'
             gt.then(() => {
                 if(element.originalStyle?.overflow == 'visible'){
                     element.el.style.overflow = ''

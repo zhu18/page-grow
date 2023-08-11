@@ -72,4 +72,5 @@ export declare class HTMLPageParser extends AbstractParser {
     private _parsePartsConfig;
     private _getCompTl;
     private _getStartTime;
+    private _hasTextAndTag;
 }

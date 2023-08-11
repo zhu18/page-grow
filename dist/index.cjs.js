@@ -47,10 +47,10 @@ function _assertThisInitialized$1(self) { if (self === void 0) { throw new Refer
 function _inheritsLoose$1(subClass, superClass) { subClass.prototype = Object.create(superClass.prototype); subClass.prototype.constructor = subClass; subClass.__proto__ = superClass; }
 
 /*!
- * GSAP 3.11.4
+ * GSAP 3.12.1
  * https://greensock.com
  *
- * @license Copyright 2008-2022, GreenSock. All rights reserved.
+ * @license Copyright 2008-2023, GreenSock. All rights reserved.
  * Subject to the terms at https://greensock.com/standard-license or for
  * Club GreenSock members, the agreement issued with that membership.
  * @author: Jack Doyle, jack@greensock.com
@@ -367,7 +367,7 @@ _parseRelative = function _parseRelative(start, value) {
   child._next = child._prev = child.parent = null; // don't delete the _dp just so we can revert if necessary. But parent should be null to indicate the item isn't in a linked list.
 },
     _removeFromParent = function _removeFromParent(child, onlyIfParentHasAutoRemove) {
-  child.parent && (!onlyIfParentHasAutoRemove || child.parent.autoRemoveChildren) && child.parent.remove(child);
+  child.parent && (!onlyIfParentHasAutoRemove || child.parent.autoRemoveChildren) && child.parent.remove && child.parent.remove(child);
   child._act = 0;
 },
     _uncache = function _uncache(animation, child) {
@@ -1043,58 +1043,64 @@ distribute = function distribute(v) {
   return animation;
 },
     _quickTween,
+    _registerPluginQueue = [],
     _createPlugin = function _createPlugin(config) {
-  config = !config.name && config["default"] || config; //UMD packaging wraps things oddly, so for example MotionPathHelper becomes {MotionPathHelper:MotionPathHelper, default:MotionPathHelper}.
+  if (_windowExists$2() && config) {
+    // edge case: some build tools may pass in a null/undefined value
+    config = !config.name && config["default"] || config; //UMD packaging wraps things oddly, so for example MotionPathHelper becomes {MotionPathHelper:MotionPathHelper, default:MotionPathHelper}.
 
-  var name = config.name,
-      isFunc = _isFunction$1(config),
-      Plugin = name && !isFunc && config.init ? function () {
-    this._props = [];
-  } : config,
-      //in case someone passes in an object that's not a plugin, like CustomEase
-  instanceDefaults = {
-    init: _emptyFunc$1,
-    render: _renderPropTweens,
-    add: _addPropTween,
-    kill: _killPropTweensOf,
-    modifier: _addPluginModifier,
-    rawVars: 0
-  },
-      statics = {
-    targetTest: 0,
-    get: 0,
-    getSetter: _getSetter,
-    aliases: {},
-    register: 0
-  };
+    var name = config.name,
+        isFunc = _isFunction$1(config),
+        Plugin = name && !isFunc && config.init ? function () {
+      this._props = [];
+    } : config,
+        //in case someone passes in an object that's not a plugin, like CustomEase
+    instanceDefaults = {
+      init: _emptyFunc$1,
+      render: _renderPropTweens,
+      add: _addPropTween,
+      kill: _killPropTweensOf,
+      modifier: _addPluginModifier,
+      rawVars: 0
+    },
+        statics = {
+      targetTest: 0,
+      get: 0,
+      getSetter: _getSetter,
+      aliases: {},
+      register: 0
+    };
 
-  _wake();
+    _wake();
 
-  if (config !== Plugin) {
-    if (_plugins[name]) {
-      return;
+    if (config !== Plugin) {
+      if (_plugins[name]) {
+        return;
+      }
+
+      _setDefaults$1(Plugin, _setDefaults$1(_copyExcluding(config, instanceDefaults), statics)); //static methods
+
+
+      _merge(Plugin.prototype, _merge(instanceDefaults, _copyExcluding(config, statics))); //instance methods
+
+
+      _plugins[Plugin.prop = name] = Plugin;
+
+      if (config.targetTest) {
+        _harnessPlugins.push(Plugin);
+
+        _reservedProps[name] = 1;
+      }
+
+      name = (name === "css" ? "CSS" : name.charAt(0).toUpperCase() + name.substr(1)) + "Plugin"; //for the global name. "motionPath" should become MotionPathPlugin
     }
 
-    _setDefaults$1(Plugin, _setDefaults$1(_copyExcluding(config, instanceDefaults), statics)); //static methods
+    _addGlobal(name, Plugin);
 
-
-    _merge(Plugin.prototype, _merge(instanceDefaults, _copyExcluding(config, statics))); //instance methods
-
-
-    _plugins[Plugin.prop = name] = Plugin;
-
-    if (config.targetTest) {
-      _harnessPlugins.push(Plugin);
-
-      _reservedProps[name] = 1;
-    }
-
-    name = (name === "css" ? "CSS" : name.charAt(0).toUpperCase() + name.substr(1)) + "Plugin"; //for the global name. "motionPath" should become MotionPathPlugin
+    config.register && config.register(gsap$2, Plugin, PropTween);
+  } else {
+    config && _registerPluginQueue.push(config);
   }
-
-  _addGlobal(name, Plugin);
-
-  config.register && config.register(gsap$2, Plugin, PropTween);
 },
 
 /*
@@ -1375,6 +1381,8 @@ _tickerActive,
           _install(_installScope || _win$3.GreenSockGlobals || !_win$3.gsap && _win$3 || {});
 
           _raf = _win$3.requestAnimationFrame;
+
+          _registerPluginQueue.forEach(_createPlugin);
         }
 
         _id && _self.sleep();
@@ -1813,7 +1821,7 @@ var Animation = /*#__PURE__*/function () {
     this._rts = +value || 0;
     this._ts = this._ps || value === -_tinyNum ? 0 : this._rts; // _ts is the functional timeScale which would be 0 if the animation is paused.
 
-    this.totalTime(_clamp(-this._delay, this._tDur, tTime), true);
+    this.totalTime(_clamp(-Math.abs(this._delay), this._tDur, tTime), true);
 
     _setEnd(this); // if parent.smoothChildTiming was false, the end time didn't get updated in the _alignPlayhead() method, so do it here.
 
@@ -2194,7 +2202,7 @@ var Timeline = /*#__PURE__*/function (_Animation) {
         }
 
         prevIteration = _animationCycle(this._tTime, cycleDuration);
-        !prevTime && this._tTime && prevIteration !== iteration && (prevIteration = iteration); // edge case - if someone does addPause() at the very beginning of a repeating timeline, that pause is technically at the same spot as the end which causes this._time to get set to 0 when the totalTime would normally place the playhead at the end. See https://greensock.com/forums/topic/23823-closing-nav-animation-not-working-on-ie-and-iphone-6-maybe-other-older-browser/?tab=comments#comment-113005
+        !prevTime && this._tTime && prevIteration !== iteration && this._tTime - prevIteration * cycleDuration - this._dur <= 0 && (prevIteration = iteration); // edge case - if someone does addPause() at the very beginning of a repeating timeline, that pause is technically at the same spot as the end which causes this._time to get set to 0 when the totalTime would normally place the playhead at the end. See https://greensock.com/forums/topic/23823-closing-nav-animation-not-working-on-ie-and-iphone-6-maybe-other-older-browser/?tab=comments#comment-113005 also, this._tTime - prevIteration * cycleDuration - this._dur <= 0 just checks to make sure it wasn't previously in the "repeatDelay" portion
 
         if (yoyo && iteration & 1) {
           time = dur - time;
@@ -2268,7 +2276,7 @@ var Timeline = /*#__PURE__*/function (_Animation) {
         prevTime = 0; // upon init, the playhead should always go forward; someone could invalidate() a completed timeline and then if they restart(), that would make child tweens render in reverse order which could lock in the wrong starting values if they build on each other, like tl.to(obj, {x: 100}).to(obj, {x: 0}).
       }
 
-      if (!prevTime && time && !suppressEvents) {
+      if (!prevTime && time && !suppressEvents && !iteration) {
         _callback(this, "onStart");
 
         if (this._tTime !== tTime) {
@@ -3476,7 +3484,7 @@ var Tween = /*#__PURE__*/function (_Animation2) {
         this.ratio = ratio = 1 - ratio;
       }
 
-      if (time && !prevTime && !suppressEvents) {
+      if (time && !prevTime && !suppressEvents && !iteration) {
         _callback(this, "onStart");
 
         if (this._tTime !== tTime) {
@@ -3888,6 +3896,7 @@ var _media = [],
     _listeners = {},
     _emptyArray = [],
     _lastMediaTime = 0,
+    _contextID = 0,
     _dispatch = function _dispatch(type) {
   return (_listeners[type] || _emptyArray).map(function (f) {
     return f();
@@ -3943,6 +3952,8 @@ var Context = /*#__PURE__*/function () {
     this._r = []; // returned/cleanup functions
 
     this.isReverted = false;
+    this.id = _contextID++; // to work around issues that frameworks like Vue cause by making things into Proxies which make it impossible to do something like _media.indexOf(this) because "this" would no longer refer to the Context instance itself - it'd refer to a Proxy! We needed a way to identify the context uniquely
+
     func && this.add(func);
   }
 
@@ -4026,7 +4037,7 @@ var Context = /*#__PURE__*/function () {
       }); // note: all of the _startAt tweens should be reverted in reverse order that they were created, and they'll all have the same globalTime (-1) so the " || -1" in the sort keeps the order properly.
 
       this.data.forEach(function (e) {
-        return !(e instanceof Animation) && e.revert && e.revert(revert);
+        return e instanceof Timeline ? e.data !== "nested" && e.kill() : !(e instanceof Tween) && e.revert && e.revert(revert);
       });
 
       this._r.forEach(function (f) {
@@ -4043,9 +4054,12 @@ var Context = /*#__PURE__*/function () {
     this.clear();
 
     if (matchMedia) {
-      var i = _media.indexOf(this);
+      var i = _media.length;
 
-      !!~i && _media.splice(i, 1);
+      while (i--) {
+        // previously, we checked _media.indexOf(this), but some frameworks like Vue enforce Proxy objects that make it impossible to get the proper result that way, so we must use a unique ID number instead.
+        _media[i].id === this.id && _media.splice(i, 1);
+      }
     }
   };
 
@@ -4073,6 +4087,8 @@ var MatchMedia = /*#__PURE__*/function () {
         mq,
         p,
         active;
+    _context$1 && !context.selector && (context.selector = _context$1.selector); // in case a context is created inside a context. Like a gsap.matchMedia() that's inside a scoped gsap.context()
+
     this.contexts.push(context);
     func = context.add("onMatch", func);
     context.queries = conditions;
@@ -4461,7 +4477,7 @@ var gsap$2 = _gsap.registerPlugin({
   }
 }, _buildModifierPlugin("roundProps", _roundModifier), _buildModifierPlugin("modifiers"), _buildModifierPlugin("snap", snap)) || _gsap; //to prevent the core plugins from being dropped via aggressive tree shaking, we must include them in the variable declaration in this way.
 
-Tween.version = Timeline.version = gsap$2.version = "3.11.4";
+Tween.version = Timeline.version = gsap$2.version = "3.12.1";
 _coreReady = 1;
 _windowExists$2() && _wake();
 _easeMap.Power0;
@@ -4484,10 +4500,10 @@ _easeMap.Power0;
     _easeMap.Circ;
 
 /*!
- * CSSPlugin 3.11.4
+ * CSSPlugin 3.12.1
  * https://greensock.com
  *
- * Copyright 2008-2022, GreenSock. All rights reserved.
+ * Copyright 2008-2023, GreenSock. All rights reserved.
  * Subject to the terms at https://greensock.com/standard-license or for
  * Club GreenSock members, the agreement issued with that membership.
  * @author: Jack Doyle, jack@greensock.com
@@ -4566,7 +4582,7 @@ _renderRoundedCSSProp = function _renderRoundedCSSProp(ratio, data) {
   var target = this.target,
       style = target.style;
 
-  if (property in _transformProps) {
+  if (property in _transformProps && style) {
     this.tfm = this.tfm || {};
 
     if (property !== "transform") {
@@ -4574,6 +4590,10 @@ _renderRoundedCSSProp = function _renderRoundedCSSProp(ratio, data) {
       ~property.indexOf(",") ? property.split(",").forEach(function (a) {
         return _this.tfm[a] = _get(target, a);
       }) : this.tfm[property] = target._gsap.x ? target._gsap[property] : _get(target, property); // note: scale would map to "scaleX,scaleY", thus we loop and apply them both.
+    } else {
+      return _propertyAliases.transform.split(",").forEach(function (p) {
+        return _saveStyle.call(_this, p, isNotCSS);
+      });
     }
 
     if (this.props.indexOf(_transformProp$2) >= 0) {
@@ -4607,7 +4627,7 @@ _renderRoundedCSSProp = function _renderRoundedCSSProp(ratio, data) {
 
   for (i = 0; i < props.length; i += 3) {
     // stored like this: property, isNotCSS, value
-    props[i + 1] ? target[props[i]] = props[i + 2] : props[i + 2] ? style[props[i]] = props[i + 2] : style.removeProperty(props[i].replace(_capsExp, "-$1").toLowerCase());
+    props[i + 1] ? target[props[i]] = props[i + 2] : props[i + 2] ? style[props[i]] = props[i + 2] : style.removeProperty(props[i].substr(0, 2) === "--" ? props[i] : props[i].replace(_capsExp, "-$1").toLowerCase());
   }
 
   if (this.tfm) {
@@ -4622,20 +4642,22 @@ _renderRoundedCSSProp = function _renderRoundedCSSProp(ratio, data) {
 
     i = _reverting();
 
-    if (i && !i.isStart && !style[_transformProp$2]) {
+    if ((!i || !i.isStart) && !style[_transformProp$2]) {
       _removeIndependentTransforms(style);
 
       cache.uncache = 1; // if it's a startAt that's being reverted in the _initTween() of the core, we don't need to uncache transforms. This is purely a performance optimization.
     }
   }
 },
-    _getStyleSaver = function _getStyleSaver(target, properties) {
+    _getStyleSaver$1 = function _getStyleSaver(target, properties) {
   var saver = {
     target: target,
     props: [],
     revert: _revertStyle,
     save: _saveStyle
   };
+  target._gsap || gsap$2.core.getCache(target); // just make sure there's a _gsap cache defined because we read from it in _saveStyle() and it's more efficient to just check it here once.
+
   properties && properties.split(",").forEach(function (p) {
     return saver.save(p);
   });
@@ -5797,7 +5819,7 @@ var CSSPlugin = {
         inlineProps;
     _pluginInitted || _initCore$2(); // we may call init() multiple times on the same plugin instance, like when adding special properties, so make sure we don't overwrite the revert data or inlineProps
 
-    this.styles = this.styles || _getStyleSaver(target);
+    this.styles = this.styles || _getStyleSaver$1(target);
     inlineProps = this.styles.props;
     this.tween = tween;
 
@@ -5998,7 +6020,7 @@ var CSSPlugin = {
   }
 };
 gsap$2.utils.checkPrefix = _checkPropPrefix;
-gsap$2.core.getStyleSaver = _getStyleSaver;
+gsap$2.core.getStyleSaver = _getStyleSaver$1;
 
 (function (positionAndScale, rotation, others, aliases) {
   var all = _forEachName(positionAndScale + "," + rotation + "," + others, function (name) {
@@ -6029,10 +6051,10 @@ var gsapWithCSS = gsap$2.registerPlugin(CSSPlugin) || gsap$2;
 gsapWithCSS.core.Tween;
 
 /*!
- * matrix 3.11.4
+ * matrix 3.12.1
  * https://greensock.com
  *
- * Copyright 2008-2022, GreenSock. All rights reserved.
+ * Copyright 2008-2023, GreenSock. All rights reserved.
  * Subject to the terms at https://greensock.com/standard-license or for
  * Club GreenSock members, the agreement issued with that membership.
  * @author: Jack Doyle, jack@greensock.com
@@ -6471,6 +6493,7 @@ var gsap$1,
     _defaultCursor,
     _supportsPointer,
     _context,
+    _getStyleSaver,
     _dragCount = 0,
     _windowExists = function _windowExists() {
   return typeof window !== "undefined";
@@ -6939,9 +6962,9 @@ _getElementBounds = function _getElementBounds(element, context) {
   return vars;
 },
     _isClickable = function _isClickable(element) {
-  //sometimes it's convenient to mark an element as clickable by adding a data-clickable="true" attribute (in which case we won't preventDefault() the mouse/touch event). This method checks if the element is an <a>, <input>, or <button> or has an onclick or has the data-clickable or contentEditable attribute set to true (or any of its parent elements).
+  //sometimes it's convenient to mark an element as clickable by adding a data-clickable="true" attribute (in which case we won't preventDefault() the mouse/touch event). This method checks if the element is an <a>, <input>, or <button> or has the data-clickable or contentEditable attribute set to true (or any of its parent elements).
   var data;
-  return !element || !element.getAttribute || element === _body ? false : (data = element.getAttribute("data-clickable")) === "true" || data !== "false" && (element.onclick || _clickableTagExp.test(element.nodeName + "") || element.getAttribute("contentEditable") === "true") ? true : _isClickable(element.parentNode);
+  return !element || !element.getAttribute || element === _body ? false : (data = element.getAttribute("data-clickable")) === "true" || data !== "false" && (_clickableTagExp.test(element.nodeName + "") || element.getAttribute("contentEditable") === "true") ? true : _isClickable(element.parentNode);
 },
     _setSelectable = function _setSelectable(elements, selectable) {
   var i = elements.length,
@@ -7304,6 +7327,7 @@ ScrollProxy = function ScrollProxy(element, vars) {
     _transformProp = _checkPrefix(_transformProp);
     _transformOriginProp = _checkPrefix(_transformOriginProp);
     _toArray = gsap$1.utils.toArray;
+    _getStyleSaver = gsap$1.core.getStyleSaver;
     _supports3D = !!_checkPrefix("perspective");
   } else if (required) {
     console.warn("Please gsap.registerPlugin(Draggable)");
@@ -7357,6 +7381,8 @@ var Draggable = /*#__PURE__*/function (_EventDispatcher) {
     _this2 = _EventDispatcher.call(this) || this;
     _coreInitted$1 || _initCore$1(1);
     target = _toArray(target)[0]; //in case the target is a selector object or selector text
+
+    _this2.styles = _getStyleSaver && _getStyleSaver(target, "transform,left,top");
 
     if (!InertiaPlugin) {
       InertiaPlugin = gsap$1.plugins.inertia;
@@ -8977,7 +9003,12 @@ var Draggable = /*#__PURE__*/function (_EventDispatcher) {
       _removeScrollListener(target, updateScroll);
 
       enabled = false;
-      InertiaPlugin && type !== "soft" && InertiaPlugin.untrack(scrollProxy || target, xyMode ? "x,y" : rotationMode ? "rotation" : "top,left");
+
+      if (InertiaPlugin && type !== "soft") {
+        InertiaPlugin.untrack(scrollProxy || target, xyMode ? "x,y" : rotationMode ? "rotation" : "top,left");
+        self.tween && self.kill();
+      }
+
       scrollProxy && scrollProxy.disable();
 
       _removeFromRenderQueue(render);
@@ -8991,7 +9022,7 @@ var Draggable = /*#__PURE__*/function (_EventDispatcher) {
       return arguments.length ? value ? self.enable(type) : self.disable(type) : enabled;
     };
 
-    _this2.kill = _this2.revert = function () {
+    _this2.kill = function () {
       self.isThrowing = false;
       self.tween && self.tween.kill();
       self.disable();
@@ -9000,6 +9031,11 @@ var Draggable = /*#__PURE__*/function (_EventDispatcher) {
       });
       delete _lookup[target._gsDragID];
       return self;
+    };
+
+    _this2.revert = function () {
+      this.kill();
+      this.styles && this.styles.revert();
     };
 
     if (~type.indexOf("scroll")) {
@@ -9116,7 +9152,7 @@ _setDefaults(Draggable.prototype, {
 });
 
 Draggable.zIndex = 1000;
-Draggable.version = "3.11.4";
+Draggable.version = "3.12.1";
 _getGSAP$1() && gsap$1.registerPlugin(Draggable);
 
 var commonjsGlobal = typeof globalThis !== 'undefined' ? globalThis : typeof window !== 'undefined' ? window : typeof global !== 'undefined' ? global : typeof self !== 'undefined' ? self : {};
@@ -10149,10 +10185,10 @@ var DrawSVGPlugin3_min = {
 var DrawSVGPlugin = /*@__PURE__*/getDefaultExportFromCjs(DrawSVGPlugin3_minExports);
 
 /*!
- * paths 3.11.4
+ * paths 3.12.1
  * https://greensock.com
  *
- * Copyright 2008-2022, GreenSock. All rights reserved.
+ * Copyright 2008-2023, GreenSock. All rights reserved.
  * Subject to the terms at https://greensock.com/standard-license or for
  * Club GreenSock members, the agreement issued with that membership.
  * @author: Jack Doyle, jack@greensock.com
@@ -10627,10 +10663,10 @@ export function pointToScreen(svgElement, point) {
 */
 
 /*!
- * CustomEase 3.11.4
+ * CustomEase 3.12.1
  * https://greensock.com
  *
- * @license Copyright 2008-2022, GreenSock. All rights reserved.
+ * @license Copyright 2008-2023, GreenSock. All rights reserved.
  * Subject to the terms at https://greensock.com/standard-license or for
  * Club GreenSock members, the agreement issued with that membership.
  * @author: Jack Doyle, jack@greensock.com
@@ -10991,7 +11027,7 @@ var CustomEase = /*#__PURE__*/function () {
   return CustomEase;
 }();
 _getGSAP() && gsap.registerPlugin(CustomEase);
-CustomEase.version = "3.11.4";
+CustomEase.version = "3.12.1";
 
 gsapWithCSS.registerPlugin(Draggable);
 gsapWithCSS.registerPlugin(ScrambleTextPlugin);
@@ -11022,13 +11058,13 @@ var EGrowElementType;
 })(EGrowElementType || (EGrowElementType = {}));
 var EGrowElementTime;
 (function (EGrowElementTime) {
-    EGrowElementTime[EGrowElementTime["number"] = 0.3] = "number";
-    EGrowElementTime[EGrowElementTime["string"] = 0.3] = "string";
-    EGrowElementTime[EGrowElementTime["image"] = 0.6] = "image";
-    EGrowElementTime[EGrowElementTime["chart"] = 0.6] = "chart";
+    EGrowElementTime[EGrowElementTime["number"] = 0.2] = "number";
+    EGrowElementTime[EGrowElementTime["string"] = 0.2] = "string";
+    EGrowElementTime[EGrowElementTime["image"] = 0.3] = "image";
+    EGrowElementTime[EGrowElementTime["chart"] = 0.3] = "chart";
     EGrowElementTime[EGrowElementTime["none"] = 0] = "none";
     EGrowElementTime[EGrowElementTime["svg"] = 0.2] = "svg";
-    EGrowElementTime[EGrowElementTime["bg"] = 0.6] = "bg";
+    EGrowElementTime[EGrowElementTime["bg"] = 0.2] = "bg";
     EGrowElementTime[EGrowElementTime["audio"] = 0.3] = "audio";
     EGrowElementTime[EGrowElementTime["video"] = 0.5] = "video";
     EGrowElementTime[EGrowElementTime["canvas"] = 0.2] = "canvas";
@@ -11599,6 +11635,7 @@ var HTMLGrowAnimateController = /** @class */ (function () {
             element.grow = gt;
         }
         if (element.type !== EGrowElementType.none) {
+            // element.el.style.height = element.h + 'px'
             gt.then(function () {
                 var _a, _b;
                 if (((_a = element.originalStyle) === null || _a === void 0 ? void 0 : _a.overflow) == 'visible') {
@@ -11911,11 +11948,15 @@ var HTMLPageParser = /** @class */ (function (_super) {
             for (var i = 0; i < element_child.length; i++) {
                 // 针对dev平台模块辅助线dom忽略
                 if (element_child[i].className.toString().includes("handle handle-")) {
-                    break;
+                    continue;
                 }
                 // 针对页面script标签忽略
                 if (element_child[i].nodeName == 'SCRIPT') {
-                    break;
+                    continue;
+                }
+                // 针对页面style标签忽略
+                if (element_child[i].nodeName == 'STYLE') {
+                    continue;
                 }
                 var x = element_child[i].getBoundingClientRect().left - element_x;
                 var y = element_child[i].getBoundingClientRect().top - element_y;
@@ -12027,9 +12068,6 @@ var HTMLPageParser = /** @class */ (function (_super) {
             case "CANVAS":
                 etype = EGrowElementType.canvas;
                 break;
-            case "STYLE":
-                etype = EGrowElementType.style;
-                break;
         }
         var hasBg = (window.getComputedStyle(el).backgroundColor != 'rgba(0, 0, 0, 0)'
             || window.getComputedStyle(el).backgroundImage != 'none'
@@ -12043,7 +12081,7 @@ var HTMLPageParser = /** @class */ (function (_super) {
             etype = EGrowElementType.chart;
         }
         //文本/数字
-        if (el.nodeType === 1 && el.children.length === 0 && el.innerText && (etype !== EGrowElementType.style)) {
+        if (el.nodeType === 1 && el.children.length === 0 && el.innerText) {
             var text = el.innerText, isNum = isNaN(Number(text.replace(",", "")));
             if (isNum) {
                 if (hasBg) {
@@ -12065,6 +12103,11 @@ var HTMLPageParser = /** @class */ (function (_super) {
                     etype = EGrowElementType.number;
                 }
             }
+        }
+        //判断元素 是否既包含文本节点又包含元素节点,若是，则其元素类型设置为bg
+        var hasTextAndTag = this._hasTextAndTag(el);
+        if (hasTextAndTag) {
+            etype = EGrowElementType.bg;
         }
         //判断是否为叶子节点
         var isLeafNode = false;
@@ -12091,18 +12134,18 @@ var HTMLPageParser = /** @class */ (function (_super) {
         if (isLeafNode && this._option.leafNodeType == 'sys_height') {
             el.style.height = 0;
             el.style.opacity = 0;
-            el.style.overflow = 'auto';
+            el.style.overflow = 'overflow';
         }
         else if (isLeafNode && this._option.leafNodeType == 'sys_width') {
             el.style.width = 0;
             el.style.opacity = 0;
-            el.style.overflow = 'auto';
+            el.style.overflow = 'overflow';
         }
-        else if (etype != EGrowElementType.none && (etype !== EGrowElementType.style) && (etype !== EGrowElementType.string)) {
+        else if (etype != EGrowElementType.none) {
             el.style.opacity = 0;
-            //  el.style.overflow = 'hidden'
+            el.style.overflow = 'overflow';
         }
-        if (etype != EGrowElementType.none && (etype !== EGrowElementType.style) && etype !== EGrowElementType.leafNode) {
+        if (etype != EGrowElementType.none && etype !== EGrowElementType.leafNode) {
             el.classList.add('page-grow-dom');
         }
         return etype;
@@ -12201,6 +12244,24 @@ var HTMLPageParser = /** @class */ (function (_super) {
             return 0;
         }
         return 0;
+    };
+    HTMLPageParser.prototype._hasTextAndTag = function (el) {
+        var _a;
+        var children = el.childNodes, length = children.length, _b = [false, false], hasText = _b[0], hasTag = _b[1];
+        for (var i = 0; i < length; i++) {
+            if (children[i].nodeName == '#text') {
+                if ((_a = children[i].nodeValue) === null || _a === void 0 ? void 0 : _a.trim()) {
+                    hasText = true;
+                }
+            }
+            if (children[i].nodeType === 1) {
+                hasTag = true;
+            }
+        }
+        if (hasText && hasTag) {
+            return true;
+        }
+        return false;
     };
     return HTMLPageParser;
 }(AbstractParser));

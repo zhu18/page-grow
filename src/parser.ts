@@ -125,14 +125,19 @@ export class HTMLPageParser extends AbstractParser{
             let element_child = element.children,
                 element_x = element.getBoundingClientRect().left,
                 element_y = element.getBoundingClientRect().top;
+            
             for(let i = 0 ; i < element_child.length; i++){
                 // 针对dev平台模块辅助线dom忽略
                 if(element_child[i].className.toString().includes("handle handle-")){
-                    break
+                    continue
                 }
                 // 针对页面script标签忽略
                 if(element_child[i].nodeName == 'SCRIPT'){
-                    break
+                    continue
+                }
+                // 针对页面style标签忽略
+                if(element_child[i].nodeName == 'STYLE'){
+                    continue
                 }
                 
                 const x = element_child[i].getBoundingClientRect().left - element_x;
@@ -143,9 +148,11 @@ export class HTMLPageParser extends AbstractParser{
                 const centerY = y + h /2;
                 let el = this._getElement(element_child[i], x, y, centerX, centerY, layer)
                 let child = [], isParse = this._isParse(el)
+                
                 if(element_child[i].children.length && isParse){
                     child = this._parseHTMLElementRecurve(element_child[i], layer + 1)
                 }
+           
                 el.children = child
                 element_info.push(el)
                 
@@ -251,9 +258,6 @@ export class HTMLPageParser extends AbstractParser{
             case "CANVAS":
                 etype = EGrowElementType.canvas
                 break;
-            case "STYLE":
-                etype = EGrowElementType.style
-                break;
         }
         let hasBg = (window.getComputedStyle(el).backgroundColor != 'rgba(0, 0, 0, 0)' 
             || window.getComputedStyle(el).backgroundImage != 'none' 
@@ -267,7 +271,7 @@ export class HTMLPageParser extends AbstractParser{
             etype = EGrowElementType.chart
         }
         //文本/数字
-        if(el.nodeType === 1 && el.children.length === 0 && el.innerText && (etype !== EGrowElementType.style)){
+        if(el.nodeType === 1 && el.children.length === 0 && el.innerText){
             let text = el.innerText, isNum = isNaN(Number(text.replace(",", "")))
             
             if(isNum){
@@ -291,6 +295,13 @@ export class HTMLPageParser extends AbstractParser{
             }
             
         }
+
+        //判断元素 是否既包含文本节点又包含元素节点,若是，则其元素类型设置为bg
+        let hasTextAndTag = this._hasTextAndTag(el)
+        if(hasTextAndTag){
+            etype = EGrowElementType.bg
+        }
+
         //判断是否为叶子节点
         let isLeafNode = false
         //如果anovSimpleMode=true，则判断el类名是否包含anov-part，若包含则设置该元素为叶子节点
@@ -316,18 +327,18 @@ export class HTMLPageParser extends AbstractParser{
         if(isLeafNode && this._option.leafNodeType == 'sys_height'){
             el.style.height = 0
             el.style.opacity = 0
-        el.style.overflow = 'auto'
+            el.style.overflow = 'overflow'
 
         }else if(isLeafNode && this._option.leafNodeType == 'sys_width' ){
             el.style.width = 0
             el.style.opacity = 0
-        el.style.overflow = 'auto'
+            el.style.overflow = 'overflow'
 
-        }else if(etype != EGrowElementType.none && (etype !== EGrowElementType.style) && (etype !== EGrowElementType.string)){
+        }else if(etype != EGrowElementType.none){
             el.style.opacity = 0
-            //  el.style.overflow = 'hidden'
+            el.style.overflow = 'overflow'
         }
-        if(etype != EGrowElementType.none && (etype !== EGrowElementType.style) && etype !== EGrowElementType.leafNode){
+        if(etype != EGrowElementType.none && etype !== EGrowElementType.leafNode){
             el.classList.add('page-grow-dom')
         }
         return etype
@@ -427,6 +438,24 @@ export class HTMLPageParser extends AbstractParser{
         }
         return 0
         
+    }
+    private _hasTextAndTag(el:HTMLElement){
+        let children = el.childNodes, length = children.length, [hasText, hasTag] = [false, false]
+        for(let i = 0; i < length; i++){
+            if(children[i].nodeName == '#text'){
+                if(children[i].nodeValue?.trim()){
+                    hasText = true
+                }
+            }
+            if(children[i].nodeType === 1){
+                hasTag = true
+            }
+        }
+
+        if(hasText && hasTag){
+            return true
+        }
+        return false
     }
 
 }

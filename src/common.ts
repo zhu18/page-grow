@@ -43,13 +43,13 @@ export  enum EGrowElementType{
 
 
 export  enum EGrowElementTime{
-    number=0.3,
-    string=0.3,    
-    image=0.6,
-    chart=0.6,
+    number=0.2,
+    string=0.2,    
+    image=0.3,
+    chart=0.3,
     none=0,
     svg=0.2,
-    bg=0.6,
+    bg=0.2,
     audio=0.3,
     video=0.5,
     canvas=0.2,
